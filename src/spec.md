@@ -1,0 +1,645 @@
+# Strange Waves
+
+## Overview
+An audio file management and streaming application that allows users to upload audio files with associated album artwork and play them back through a web-based audio player with streaming capabilities. The application integrates with the Audius public API to provide access to external music content alongside local uploads. The application also provides external integration capabilities for third-party applications to access and stream audio content. The application uses Internet Identity for user authentication and authorization. All uploaded tracks and saved playlists are publicly accessible and playable without requiring sign-in, while authorized actions (upload, edit, delete) remain restricted to the signed-in owner. The application is deployed as a live production canister that serves as the persistent storage for all uploads, playlists, and metadata.
+
+## Core Features
+
+### Advanced Debugging and Fallback System
+- Global non-blocking fallback UI that remains visible during initialization failures
+- Clear error messaging and retry options in the fallback interface
+- Enhanced runtime diagnostics that log the specific file, component, and hook causing render crashes
+- Granular error context reporting for all startup components
+- ErrorBoundary component that catches JavaScript errors anywhere in the component tree
+- User-friendly fallback UI displayed instead of blank screens when errors occur
+- Detailed fallback view with error context information when crashes occur
+- Console logging of specific errors within the boundary for developer debugging
+- Advanced runtime diagnostics to detect and log component initialization failures throughout the frontend
+- Startup health check logger that verifies React rendering completion and outputs clear failure messages
+- Lazy loading and conditional imports for heavy initialization modules
+- Try-catch blocks around all startup components (main.tsx, App.tsx) with granular error context reporting
+- Enhanced useActor hooks wrapped in try-catch blocks that log and gracefully skip errors instead of breaking the tree render
+- Core UI components (header, audio player, and library) load even when authentication initialization fails using default safe states
+- Error handling maintains existing functionality and visual layout without altering working components
+
+### Actor Readiness Check System
+- Actor readiness check before any upload or playlist operation runs
+- Friendly message display when actor is uninitialized, prompting users to log in or wait
+- Graceful retry logic that queues actions until the actor becomes available
+- UI components (AudioUploader, PlaylistManager, and others using actor calls) conditionally disable buttons until actor initialization completes
+- Console logging of actor initialization status for debugging clarity
+- Action queuing system that processes pending operations once actor becomes ready
+
+### Internet Identity Authentication System
+- Internet Identity integration for user authentication
+- Authentication state management integrated with backend actor for authenticated actions
+- User principal display and authentication status in the UI
+- Login/logout functionality through Internet Identity
+- Standard ICP authentication flows
+- Transaction signing capabilities for authenticated operations
+
+### Enhanced In-App Wallet Framework with Token Tracking and Auto-Listing
+- Automatic assignment of unique ICP wallet address (principal) to each signed-in user profile for minting, NFT ownership, and royalty distribution
+- In-app wallet management system that creates and manages user wallet addresses automatically upon authentication
+- Optional connection of existing external ICP wallets including:
+  - Plug wallet integration with secure authentication and transaction signing
+  - Stoic wallet integration with secure authentication and transaction signing
+  - Oisy wallet integration with secure authentication and transaction signing
+- Wallet connection interface allowing users to choose between in-app wallet or external wallet connection
+- Secure authentication flow for external wallet connections with transaction signing capabilities
+- Wallet address display and management within user profile interface
+- Support for switching between in-app and external wallet modes
+- Transaction history and wallet balance display for connected wallets
+- Token tracking and auto-listing system for supported ICP and ICRC assets:
+  - Support for ICP, CHAT, ckBTC, ckUSDC, and other ICRC-1 compatible tokens
+  - Auto-detection of incoming compatible tokens with automatic wallet view updates
+  - Token balance queries via ICRC-1 standard for any supported token type
+  - Token symbol, balance, and transaction history display for each tracked token
+  - Automatic addition of newly received tokens to the wallet interface
+  - Real-time balance updates for all tracked tokens
+
+### Enhanced Wallet Display Interface with Token Tracking
+- Comprehensive wallet display interface accessible from user profile or header for signed-in users
+- Clear display of the user's ICP wallet address (their principal ID) as the primary wallet address for sending and receiving assets
+- Copy button beside the displayed wallet address for easy sharing and transaction use
+- Helpful tooltip or subtext clarifying that this principal ID functions as the user's in-app wallet address unless a connected external wallet (e.g., Plug, Stoic, Oisy) is used
+- Enhanced asset holdings display showing:
+  - NFT collection (minted NFTs, owned NFTs with metadata and thumbnails)
+  - Token balances for ICP, CHAT, ckBTC, ckUSDC, and other ICRC-1 compatible tokens
+  - Token symbol and balance display for each tracked token
+  - Wallet address and principal information
+- Enhanced transaction history display showing:
+  - Recent NFT mints with timestamps and transaction details
+  - NFT transfers (sent and received) with counterparty information
+  - Token transactions (ICP, CHAT, ckBTC, ckUSDC) with transaction details
+  - Payment transactions (stablecoin payments, fees, royalties)
+  - Transaction status and confirmation details
+- Basic wallet controls including:
+  - Refresh balances button to update asset holdings and token balances
+  - View asset details functionality for individual NFTs and tokens
+  - Transaction detail expansion for viewing complete transaction information
+- Compact, visually integrated panel design that fits seamlessly with the app's theme
+- Responsive layout for both mobile and desktop viewing
+- Real-time balance updates and transaction status monitoring for all tracked tokens
+- Integration with existing wallet framework (in-app and external wallets)
+- Consistent styling with the existing wallet section and theme
+
+### Stablecoin Payment Integration System
+- Support for stablecoin-based transactions using ICRC-1/ckUSDC compatible payment rails
+- Integration with multiple stablecoins including:
+  - USDC (USD Coin)
+  - TUSD (TrueUSD)
+  - RLUSD (Ripple USD)
+  - USDE (Ethena USDe)
+  - USDP (Pax Dollar)
+- Payment processing for NFT minting transactions using selected stablecoins
+- Royalty distribution system supporting stablecoin payments to multiple addresses
+- Transaction fee calculation and display in selected stablecoin
+- Payment confirmation and receipt generation for stablecoin transactions
+- Integration with ICP's ICRC-1 token standard for seamless stablecoin handling
+
+### Enhanced Canister Information Modal System
+- Modal popup triggered by the wallet/canister button in the header
+- Display both signed-in principal ID and backend canister ID when user is authenticated
+- Two separate sections in the modal:
+  - "Signed-in Principal ID" with the user's full principal ID and copy button
+  - "Backend Canister ID" with the full canister ID and copy button
+- Copy buttons for both IDs that copy the respective full IDs to clipboard
+- Visual feedback for copy actions ("Copied!" message or icon change)
+- Fallback text ("Not available") displayed when user is not signed in
+- Basic error handling that displays "Error loading IDs" if either field fails to populate
+- Include existing Disconnect button within the same modal for unified wallet/canister management
+- Modal has proper accessibility attributes (ARIA labels, keyboard navigation)
+- Clean styling consistent with Strange Waves UI theme with proper spacing for both ID sections
+- Modal closes on click outside, "X" button, or escape key
+- Responsive design for both mobile and desktop devices
+
+### Canister Settings System
+- Settings icon in the top header that opens the CanisterSettings dialog
+- CanisterSettings dialog allows users to view and enter a "Live Canister Link" for backend sync
+- Settings functionality integrates smoothly with existing Header.tsx and CanisterSettings.tsx modules
+- Settings icon positioned alongside other header controls (Menu, Canister Info, Login)
+- Preserves all existing header functionality while adding settings access
+- Settings dialog provides interface for canister configuration and backend synchronization
+
+### Production Deployment Configuration
+- Live canister deployment as the primary production environment
+- Production canister serves as the persistent storage for all uploads, playlists, and metadata
+- All user data and content stored directly in the live production canister
+- No draft-to-live synchronization needed as the live canister is the primary storage
+- Production-ready configuration for stable public access
+
+### Audio File Upload with Album Artwork
+- Support chunked upload of audio files to handle large file sizes efficiently
+- Accept common audio formats (MP3, WAV, M4A, etc.)
+- Support image upload for album artwork (JPEG, PNG formats)
+- Allow users to select or drag-and-drop image files alongside audio files
+- Store uploaded files with associated metadata including:
+  - Title
+  - Duration
+  - File size
+  - Upload timestamp
+  - Owner principal (authenticated user)
+  - Album artwork image reference
+- Require authentication (Internet Identity) for file uploads
+- Store both audio files and associated images through the blob storage system
+
+### Audio File Storage
+- Backend stores uploaded audio files, images, and their metadata in the live production canister
+- Each audio file has a unique identifier for retrieval
+- Each image file has a unique identifier and is associated with its corresponding audio track
+- Associate uploaded files with the authenticated user's principal
+- Production-grade storage with persistent data retention
+
+### Audio Streaming
+- Stream stored audio files in 2MB chunks for efficient playbook
+- Support HTTP byte-range requests to enable:
+  - Partial file loading
+  - Seeking to specific positions in audio tracks
+  - Progressive loading during playback
+- Stream audio files from production storage
+- Serve associated album artwork images for display
+
+### Enhanced Audius API Integration with Persistent Storage
+- Frontend module for Audius public API integration with functions to:
+  - Search for tracks by keyword
+  - Retrieve track metadata including title, artist, duration, artwork, and stream URL
+- React Query configuration for Audius API requests with caching and loading states
+- Support for streaming Audius tracks directly from their platform
+- Persistent storage system for Audius tracks added to playlists:
+  - Store Audius track metadata (title, artist, artwork URL, stream URL) in backend when added to playlists
+  - Maintain Audius track references in playlist objects for cross-session availability
+  - Ensure Audius tracks remain available in playlists after page reloads and between sessions
+  - Integrate Audius metadata seamlessly with existing playlist storage and playback system
+
+### Audio Player Interface
+- HTML5 audio player component with standard controls:
+  - Play/pause functionality
+  - Progress bar with seeking capability
+  - Volume control
+  - Current time and total duration display
+- Display audio file metadata (title, duration, artist for Audius tracks)
+- Display album artwork when available for local uploaded tracks
+- Handle local audio files and external Audius tracks
+- Seamless playback switching between local and Audius content
+
+### Audio Library Interface
+- Display combined list of local uploaded files and Audius search results
+- Show album artwork thumbnails alongside track information when available
+- Clear indication of audio source (local or Audius) for each track
+- Search functionality for discovering Audius tracks
+- Selection and playback of local and external audio content
+- Tab navigation with "Playlists" tab appearing before "All Files" tab
+- Public access to all uploaded tracks and playlists without requiring sign-in
+- Authorized actions (upload, edit, delete) restricted to signed-in owners
+
+### Enhanced ICP DIP-721 NFT Minting System with Custom Parameters
+- Allow any logged-in user to mint NFTs from their uploaded content following ICP DIP-721 standard
+- Three minting types available for selection:
+  - Audio Only NFT - mints NFT containing only the audio file
+  - Album Art Only NFT - mints NFT containing only the album artwork image
+  - Combined Audio + Album Art NFT Package - mints NFT containing both audio file and album artwork
+- "Mint NFT" button integrated within upload and library sections for uploaded content
+- Enhanced minting flow with custom parameter configuration:
+  - User selection of mint type through dropdown or radio buttons
+  - Preview of selected content before confirmation
+  - Metadata input fields for artist, title, description
+  - Custom price point setting in selected stablecoin (USDC, TUSD, RLUSD, USDE, USDP)
+  - Royalty percentage configuration (0-100%) for secondary sales
+  - Multiple revenue split addresses with percentage allocation
+  - Revenue split interface allowing uploaders to define multiple wallet addresses and their respective percentage shares
+  - Automatic validation ensuring revenue split percentages total 100%
+  - Payment method selection from supported stablecoins
+  - Confirmation dialog with minting details, pricing, and revenue split summary
+  - Success and error feedback messages
+  - Owner verification during minting process
+- Integration with DIP-721 canister for NFT storage and metadata management
+- Store NFT metadata with enhanced parameters including:
+  - Artist name, title, description
+  - File type (audio, image, or combined)
+  - Minting timestamp and owner principal
+  - Reference to original uploaded content
+  - Custom price point and selected stablecoin
+  - Royalty percentage for secondary sales
+  - Revenue split configuration with multiple addresses and percentages
+  - Payment transaction records and stablecoin payment details
+- NFT records stored in backend `nftRecords` map for on-chain query and display
+- Full compatibility with ICP wallets for on-chain ownership and transfer
+- Integration with stablecoin payment system for minting fees and royalty distributions
+- Require authentication (Internet Identity) for all NFT minting operations
+
+### Music Mints NFT Display Hub with Collapsible Edit Section
+- Music Mints page serves as the central landing hub for all minted NFTs
+- Display NFTs organized under three categories:
+  - Audio Only NFTs
+  - Album Art Only NFTs
+  - Combined Package NFTs
+- Interactive display tiles or cards for each NFT with enhanced view pop-ups
+- Pop-up functionality includes:
+  - Audio playback controls for Audio Only and Combined Package NFTs
+  - High-resolution artwork display for Album Art Only and Combined Package NFTs
+  - NFT metadata display (title, artist, description, minting date)
+  - Ownership information and transfer capabilities
+  - Custom pricing and royalty information display
+  - Revenue split details and payment history
+- Dynamic "Minted NFTs" section that pulls NFT records from the backend's `nftRecords` map
+- Support for on-chain query and display of all user's minted NFTs
+- Integration with existing Internet Identity authentication for secure access
+- Responsive design for optimal viewing across devices
+- Highlighted edit section repositioned to the bottom of the Music Mints page
+- Collapsible toggle functionality for the edit section allowing users to hide or expand the edit interface for clean layout control
+- Collapsed state maintains a compact button or header that smoothly expands the full edit panel when clicked
+- Simple animation transitions for visual polish during expand/collapse operations
+- Responsive spacing and alignment maintained for the repositioned edit section
+- Close button in the highlighted edit section positioned at the top-right corner
+- Consistent spacing and alignment with existing UI elements
+
+### Enhanced Multiple Playlist Management System with Audius Track Persistence
+- Replace existing "Trending" button with "Playlist" button in the audio library interface
+- Allow authenticated users to create and save multiple independent playlists
+- Each playlist has its own unique identifier, title, and track selection
+- Modal or drawer UI for playlist management including:
+  - Creating new playlists with custom names via "Create New Playlist" action
+  - Viewing all existing user playlists
+  - Selecting and editing individual playlists
+  - Adding and removing tracks from specific playlists (both local uploads and Audius tracks)
+  - Managing individual playlist metadata
+  - Deleting existing playlists with confirmation dialog
+  - Reordering tracks within individual playlists using drag-and-drop or up/down controls
+  - Saving playlist changes via "Save Playlist" action
+  - Generating embed code snippets for sharing individual playlists on external websites
+- Three-dot (ellipsis) menu interface for playlist management:
+  - Replace inline edit controls with three-dot icon positioned at the far right of each playlist entry
+  - Pop-up context menu or modal appears when three-dot icon is clicked
+  - Context menu contains all existing edit options: Delete, Sort Order, Embed Code
+  - New "Rename" option in the context menu for renaming playlist titles
+  - Rename functionality allows editing playlist title directly within a modal or inline input field
+  - Automatic saving of new playlist name to the canister once confirmed
+  - Pop-up menu closes automatically when a selection is made or when user clicks outside
+  - Consistent spacing and responsive layout for the playlist section
+- Enhanced Audius track integration for playlists:
+  - Support for adding Audius tracks to playlists with persistent storage
+  - Store Audius track metadata (title, artist, artwork URL, stream URL) in backend when added to playlists
+  - Ensure Audius tracks remain available in playlists between sessions and after page reloads
+  - Seamless integration of Audius metadata with existing playlist objects and playback system
+  - Display Audius tracks alongside local uploads in playlist views with proper source indication
+- Support for tracks from all sources (local uploads and Audius) in each playlist
+- All playlists persist in the production canister and are retrievable per user account via connected principal
+- UI correctly refreshes state after playlist creation to display new playlists and their edit controls within the intended section
+- PlaylistManager component properly binds to the active playlist list in the backend and updates UI state immediately after creation operations
+- Playlist data persistence linked to user's Internet Identity principal
+- Public access to all saved playlists for browsing and playback without authentication
+- Playlist editing and management restricted to authenticated owners
+
+### Collapsible Audio Upload Section
+- Audio file upload section positioned at the bottom of the main page, directly beneath the Audio Library features section
+- Collapsible toggle functionality allowing users to hide or expand the upload interface for a cleaner layout
+- Collapsed state maintains a compact button or header labeled "Upload Audio File" that smoothly expands the full uploader when clicked
+- Simple animation transitions for visual polish during expand/collapse operations
+- All existing upload functionality remains intact including:
+  - Audio file and album artwork upload capabilities
+  - Drag-and-drop functionality
+  - Progress indication
+  - Authentication requirements
+  - Metadata input fields
+- Associated components and state logic relocated as needed to support the new positioning
+
+### Navigation Menu System
+- Menu button in the top banner/header that opens a dropdown or sidebar menu
+- Navigation menu contains links to:
+  - About page
+  - Merch page
+  - Music Mints page
+  - Socials page
+- Menu integrates smoothly with existing header layout
+- Responsive display support for both mobile and desktop devices
+- Consistent styling with the app's theme
+
+### External Integration Module
+- TypeScript utility file (audioApiClient.ts) providing functions for external applications:
+  - listAudioFiles() - fetch list of available audio files
+  - getAudioMetadata(id) - retrieve metadata for a specific audio file
+  - streamAudio(id) - return streaming URL or Blob for audio playback
+- React component (ExternalAudioPlayer.tsx) for external app integration:
+  - Accepts canisterId, fileId, and title as props
+  - Displays track title and playback controls
+  - Uses native HTML5 audio element for streaming
+  - Streams audio directly from the canister
+- Developer documentation with usage examples for both iframe embedding and direct stream integration
+
+### ICP-Lukso NFT Bridge Module
+- Three frontend modules under frontend/src/lib/:
+  - icpBridgeAdapter.ts - Handles NFT and metadata export from DIP-721 canister, formats data into Lukso LSP7/LSP8 compatibility schema, callable via HTTP outcalls
+  - luksoProfileSync.ts - Manages linking of ICP Principals to Lukso Universal Profile addresses using digital signatures and verification logic following LSP3 guidelines
+  - nftMirrorService.ts - Implements synchronization between both ecosystems for NFT metadata updates to ensure NFTs minted on ICP can be represented as LSP7/LSP8-compatible mirrored assets
+- Integration with existing NFT-minting logic based on DIP-721 to allow cross-chain metadata reflection
+- Type interfaces, async function stubs, and appropriate comments for future full integration with the Lukso SDK and APIs
+- Backend support for DIP-721 NFT minting and metadata storage
+- Backend endpoints for NFT bridge operations and cross-chain synchronization
+- Require authentication (Internet Identity) for NFT minting operations
+
+### Hero Section Background and Layout with Updated Description
+- Display the Strange Waves banner image (StrangeWaves2.jpg) as the background image of the hero section on the main page
+- Apply responsive background styling with `background-size: cover` and `background-position: center`
+- Ensure background image adapts to both light and dark theme modes
+- Position the hero section text (title and description) below the background image instead of overlaying it
+- Display updated description text: "Strange Waves is where genre boundaries dissolve and authenticity amplifies. We celebrate music that refuses to be commodified, championing Art that creates from the spirit, not the algorithm."
+- Maintain proper spacing and ensure text visibility on all screen sizes
+- Clean navigation header without image interference
+- Position the main content section directly below the hero text with proper spacing
+- Add appropriate margins and padding to create visual separation between hero background, hero text, and main content
+- Ensure responsive layout that maintains proper spacing across different screen sizes
+- Preserve existing text alignment and readability in the repositioned hero text section
+
+## Backend Operations
+- Handle Internet Identity authentication with caller identification
+- Store audio files, image files, and metadata with owner principal association in the live production canister
+- Handle chunked file uploads for both audio and image files with authentication verification
+- Serve audio files and images with streaming support and byte-range requests
+- Retrieve audio file metadata, image metadata, and file lists
+- Associate uploaded images with their corresponding audio tracks
+- Provide public API endpoints for external application access
+- Store multiple playlist data with metadata including:
+  - Unique playlist identifier
+  - Playlist title
+  - Creation date
+  - Track IDs and references with custom sort order
+  - Owner principal (authenticated user)
+  - Audius track metadata for persistent storage (title, artist, artwork URL, stream URL)
+- Provide multiple playlist management operations:
+  - Create new playlists with unique identifiers
+  - Retrieve all user's playlists
+  - Retrieve specific playlist by identifier
+  - Add/remove tracks from specific playlists (both local uploads and Audius tracks)
+  - Store Audius track metadata when added to playlists for cross-session persistence
+  - Update individual playlist metadata including title renaming
+  - Delete specific playlists
+  - Update track order within specific playlists
+  - Generate playlist embed code data for individual playlists
+- Ensure proper playlist state management and immediate availability of newly created playlists for frontend UI refresh
+- Manage enhanced in-app wallet framework operations with token tracking:
+  - Automatically assign unique ICP wallet address (principal) to each signed-in user profile
+  - Store and manage user wallet addresses and associated metadata
+  - Handle wallet address generation and assignment during user authentication
+  - Provide wallet balance and transaction history endpoints for multiple token types
+  - Support external wallet connection verification and authentication
+  - Manage wallet switching between in-app and external wallet modes
+  - Token tracking and auto-listing system for ICP, CHAT, ckBTC, ckUSDC, and other ICRC-1 compatible tokens
+  - Auto-detection of incoming compatible tokens with automatic balance updates
+  - ICRC-1 standard token balance queries for any supported token type
+  - Store token transaction history and metadata for tracked tokens
+- Handle enhanced wallet display interface backend operations:
+  - Provide asset holdings data including NFT collections and multi-token balances
+  - Retrieve and format transaction history data for NFT mints, transfers, and token transactions
+  - Support real-time balance queries and updates for all tracked tokens (ICP, CHAT, ckBTC, ckUSDC)
+  - Store and retrieve transaction details with timestamps and counterparty information for all token types
+  - Provide endpoints for refreshing asset holdings and token balance information
+  - Handle asset detail queries for individual NFTs and tokens
+  - Support transaction status monitoring and confirmation tracking for all tracked tokens
+- Handle stablecoin payment processing:
+  - Process ICRC-1/ckUSDC compatible stablecoin transactions
+  - Support multiple stablecoins (USDC, TUSD, RLUSD, USDE, USDP) for NFT minting payments
+  - Calculate and process transaction fees in selected stablecoins
+  - Handle royalty distribution payments to multiple addresses
+  - Store payment transaction records and stablecoin payment details
+  - Provide payment confirmation and receipt generation
+  - Manage stablecoin balance queries and transaction history
+- Support enhanced ICP DIP-721 NFT minting with custom parameters:
+  - Mint Audio Only NFTs from uploaded audio files
+  - Mint Album Art Only NFTs from uploaded album artwork images
+  - Mint Combined Audio + Album Art NFT packages containing both files
+  - Store enhanced NFT metadata including:
+    - Artist, title, description, file type, and minting timestamp
+    - Custom price point and selected stablecoin
+    - Royalty percentage for secondary sales
+    - Revenue split configuration with multiple addresses and percentages
+    - Payment transaction records and stablecoin payment details
+  - Associate minted NFTs with owner principal
+  - Retrieve user's minted NFT collection with custom parameters
+  - Verify ownership during minting process
+  - Process stablecoin payments for NFT minting fees
+  - Handle revenue split calculations and distributions
+  - Validate revenue split percentages and address configurations
+- Maintain `nftRecords` map for storing and querying all minted NFT data with enhanced metadata
+- Provide endpoints for NFT retrieval and display on Music Mints page with custom parameter information
+- Store Chain Fusion compatibility metadata for future interoperability with external blockchains
+- Ensure full ICP wallet compatibility for NFT ownership and transfer operations
+- Provide endpoints for NFT bridge operations and cross-chain synchronization
+- Handle HTTP outcalls for Lukso blockchain interactions
+- Provide public endpoints for retrieving all uploaded tracks and playlists without authentication
+- Maintain access control for modification operations (upload, edit, delete) requiring owner authentication
+- Production-grade data persistence and storage management
+- Provide canister information endpoint that returns the full canister ID for display in the frontend modal
+
+## Frontend Operations
+- Implement advanced debugging and fallback system with global non-blocking fallback UI that remains visible during initialization failures
+- Provide clear error messaging and retry options in the fallback interface
+- Implement enhanced runtime diagnostics that log the specific file, component, and hook causing render crashes
+- Wrap all startup components (main.tsx, App.tsx) in try-catch blocks with granular error context reporting
+- Ensure core UI components (header, audio player, and library) load even when authentication initialization fails using default safe states
+- Implement ErrorBoundary component with detailed fallback UI and error context information
+- Add advanced runtime diagnostics to detect and log component initialization failures throughout the frontend
+- Implement startup health check logger that verifies React rendering completion and outputs clear failure messages
+- Apply lazy loading and conditional imports for heavy initialization modules
+- Add console logging for specific errors within critical components for debugging
+- Wrap useActor hook logic in enhanced try-catch blocks to log and gracefully skip errors instead of breaking the tree render
+- Implement actor readiness check system before any upload or playlist operations
+- Display friendly messages when actor is uninitialized, prompting users to log in or wait
+- Implement graceful retry logic that queues actions until actor becomes available
+- Conditionally disable buttons in UI components (AudioUploader, PlaylistManager, and others using actor calls) until actor initialization completes
+- Log actor initialization status in console for debugging clarity
+- Process queued actions once actor becomes ready
+- Implement Internet Identity authentication system
+- Display authentication status, principal information in the UI when authenticated
+- Provide Login/Logout functionality through Internet Identity
+- Manage authentication state and integrate with backend actor for authenticated actions
+- Store and manage authenticated user's principal in application state
+- Implement stable LoginButton.tsx component for Internet Identity-based login/logout flow
+- Implement enhanced in-app wallet framework UI components with token tracking:
+  - Automatic wallet address assignment display for signed-in users
+  - Wallet management interface showing in-app wallet address and multi-token balances
+  - External wallet connection interface with support for Plug, Stoic, and Oisy wallets
+  - Wallet selection modal allowing users to choose between in-app and external wallet options
+  - Secure authentication flow for external wallet connections
+  - Transaction signing interface for external wallet operations
+  - Wallet switching functionality between in-app and external modes
+  - Wallet address display and copy functionality
+  - Transaction history display for connected wallets and all tracked tokens
+  - Balance display for both in-app and external wallets across multiple token types
+  - Token tracking interface for ICP, CHAT, ckBTC, ckUSDC, and other ICRC-1 compatible tokens
+  - Auto-detection display for newly received compatible tokens
+  - Real-time balance updates for all tracked tokens
+- Implement enhanced wallet display interface UI with token tracking in WalletDisplay.tsx:
+  - Accessible wallet display panel from user profile or header for signed-in users
+  - Clear display of the user's ICP wallet address (their principal ID) as the primary wallet address for sending and receiving assets
+  - Copy button beside the displayed wallet address for easy sharing and transaction use
+  - Helpful tooltip or subtext clarifying that this principal ID functions as the user's in-app wallet address unless a connected external wallet (e.g., Plug, Stoic, Oisy) is used
+  - Enhanced asset holdings display showing NFT collections with metadata and thumbnails
+  - Multi-token balance display for ICP, CHAT, ckBTC, ckUSDC, and other ICRC-1 compatible tokens
+  - Token symbol and balance display for each tracked token
+  - Wallet address and principal information display
+  - Enhanced transaction history interface showing recent NFT mints, transfers, and multi-token transactions
+  - Transaction detail expansion for viewing complete transaction information across all token types
+  - Refresh balances button with loading states and success feedback for all tracked tokens
+  - View asset details functionality for individual NFTs and tokens
+  - Compact, visually integrated panel design consistent with app theme
+  - Responsive layout for both mobile and desktop viewing
+  - Real-time balance updates and transaction status monitoring for all tracked tokens
+  - Integration with existing wallet framework (in-app and external wallets)
+  - Consistent styling with the existing wallet section and theme
+- Implement stablecoin payment system UI:
+  - Stablecoin selection interface for NFT minting payments (USDC, TUSD, RLUSD, USDE, USDP)
+  - Payment amount calculation and display in selected stablecoin
+  - Transaction fee display and confirmation
+  - Payment processing interface with loading states and confirmation
+  - Payment receipt display and download functionality
+  - Stablecoin balance display for connected wallets
+  - Payment history interface showing past stablecoin transactions
+  - Integration with ICRC-1/ckUSDC payment rails
+- Display "Strange Waves" as the application title throughout the interface
+- Update all visible references to use "Strange Waves" branding in the header and main UI
+- Display the Strange Waves banner image (StrangeWaves2.jpg) as the background image of the hero section on the main page with responsive styling
+- Apply `background-size: cover`, `background-position: center` for responsive background image display
+- Ensure hero section background image adapts to both light and dark theme modes
+- Position hero section text (title and description) below the background image instead of overlaying it
+- Display updated hero section description: "Strange Waves is where genre boundaries dissolve and authenticity amplifies. We celebrate music that refuses to be commodified, championing Art that creates from the spirit, not the algorithm."
+- Maintain proper spacing and text visibility on all screen sizes for the repositioned hero text
+- Keep navigation header clean without image interference
+- Position the main content section directly below the hero text with appropriate margins and padding for visual separation
+- Ensure responsive layout maintains proper spacing between hero background, hero text, and content across different screen sizes
+- Preserve existing text alignment and readability in the repositioned hero text section
+- Position audio file upload section at the bottom of the main page, directly beneath the Audio Library features section
+- Implement collapsible toggle functionality for the upload section allowing users to hide or expand the upload interface
+- Display collapsed state as a compact button or header labeled "Upload Audio File" that smoothly expands the full uploader when clicked
+- Apply simple animation transitions for visual polish during expand/collapse operations
+- Maintain all existing upload functionality including audio file and associated album artwork upload with progress indication (requires authentication)
+- Extend AudioUploader component to support image file selection and drag-and-drop functionality in the new bottom position
+- Relocate associated components and state logic as needed to support the repositioned upload section
+- Display list of available audio files from local sources with album artwork thumbnails
+- Stream and play audio files from backend production storage
+- Display album artwork in AudioPlayer component when available
+- Handle audio player controls and seeking
+- Replace "Trending" button with "Playlist" button in the audio library interface
+- Implement enhanced multiple playlist management UI with PlaylistManager component including:
+  - "Create New Playlist" action for creating new playlists with custom names
+  - "Save Playlist" action for persisting playlist changes
+  - Viewing and selecting from all existing user playlists
+  - Adding tracks to specific playlists from all sources (local uploads and Audius tracks)
+  - Removing tracks from specific playlists
+  - Managing individual playlist metadata
+  - Deleting specific playlists with confirmation dialog
+  - Reordering tracks within specific playlists using drag-and-drop interface or up/down arrow controls
+  - Generating and displaying embed code snippets for individual playlist sharing
+- Implement three-dot menu interface for playlist management:
+  - Replace inline edit controls with three-dot (ellipsis) icon positioned at the far right of each playlist entry
+  - Display pop-up context menu or modal when three-dot icon is clicked
+  - Include all existing edit options in context menu: Delete, Sort Order, Embed Code
+  - Add new "Rename" option to context menu for renaming playlist titles
+  - Implement rename functionality with modal or inline input field for editing playlist title
+  - Automatically save new playlist name to canister once confirmed
+  - Close pop-up menu automatically when selection is made or when user clicks outside
+  - Adjust layout and styling for consistent spacing and responsiveness of playlist section
+- Enhanced Audius track integration for playlist UI:
+  - Support adding Audius tracks to playlists with persistent storage indication
+  - Display Audius tracks alongside local uploads in playlist views with proper source indication
+  - Ensure Audius tracks remain visible in playlists after page reloads and between sessions
+  - Seamless integration of Audius metadata display with existing playlist interface
+  - Handle playback of both local and Audius tracks from playlist views
+- Fix playlist creation UI state refresh to ensure new playlists and their edit controls display correctly within the intended section immediately after creation
+- Ensure PlaylistManager component properly refreshes and binds to the active playlist list from the backend after playlist creation operations
+- Display multiple playlists functionality only for authenticated users
+- UI clearly displays all user playlists with three-dot menu access for edit, delete, sort, rename, and embed options for each individual playlist
+- Implement enhanced ICP DIP-721 NFT minting UI with custom parameters:
+  - Add "Mint NFT" button within upload and library sections for uploaded content
+  - Create enhanced NFT minting modal with custom parameter configuration:
+    - Mint type selection (Audio Only, Album Art Only, Combined Package)
+    - Preview of selected content before minting confirmation
+    - Metadata input fields for artist, title, and description
+    - Custom price point setting interface with stablecoin selection (USDC, TUSD, RLUSD, USDE, USDP)
+    - Royalty percentage configuration slider or input (0-100%) for secondary sales
+    - Multiple revenue split addresses interface with percentage allocation
+    - Revenue split management allowing uploaders to add/remove wallet addresses and set percentage shares
+    - Automatic validation ensuring revenue split percentages total 100%
+    - Payment method selection dropdown for supported stablecoins
+    - Enhanced confirmation dialog showing minting details, pricing, and complete revenue split summary
+    - Integration with stablecoin payment system for minting fee processing
+  - Display success and error feedback messages during and after minting process
+  - Implement owner verification checks before allowing minting
+  - Integrate minting flow with existing authentication system and wallet framework
+  - Ensure minting buttons are only visible and functional for authenticated users
+  - Handle loading states and disable minting buttons during processing
+  - Connect with stablecoin payment interface for seamless transaction processing
+- Implement enhanced Music Mints NFT Display Hub:
+  - Create Music Mints page as central landing hub for all minted NFTs
+  - Display NFTs organized under three categories: Audio Only, Album Art Only, Combined Package
+  - Implement interactive display tiles or cards for each NFT
+  - Create enhanced view pop-ups with:
+    - Audio playback controls for Audio Only and Combined Package NFTs
+    - High-resolution artwork display for Album Art Only and Combined Package NFTs
+    - NFT metadata display (title, artist, description, minting date)
+    - Custom pricing and royalty information display
+    - Revenue split details and payment history
+    - Ownership information and transfer capabilities
+  - Implement dynamic "Minted NFTs" section that pulls NFT records from backend's `nftRecords` map
+  - Support on-chain query and display of all user's minted NFTs with custom parameters
+  - Integrate with existing Internet Identity authentication for secure access
+  - Ensure responsive design for optimal viewing across devices
+  - Reposition highlighted edit section to the bottom of the Music Mints page
+  - Implement collapsible toggle functionality for the edit section allowing users to hide or expand the edit interface for clean layout control
+  - Display collapsed state as a compact button or header that smoothly expands the full edit panel when clicked
+  - Apply simple animation transitions for visual polish during expand/collapse operations
+  - Maintain responsive spacing and alignment for the repositioned edit section
+  - Include close button in the highlighted edit section positioned at the top-right corner
+  - Ensure consistent spacing and alignment with existing UI elements
+- Implement menu button in the top banner/header that opens a dropdown or sidebar menu
+- Create navigation menu with links to About, Merch, Music Mints, and Socials pages
+- Ensure menu integrates smoothly with existing header layout
+- Support responsive display for both mobile and desktop devices with consistent theme styling
+- Update all references to "FAN Connect" to "Music Mints" throughout the frontend interface including:
+  - Navigation menu dropdown items
+  - Page titles and headers
+  - Routing links and URL paths
+  - Component names and references
+  - Button labels and text content
+- Implement settings icon in the top header that opens the CanisterSettings dialog
+- CanisterSettings dialog allows users to view and enter a "Live Canister Link" for backend sync
+- Settings functionality integrates smoothly with existing Header.tsx and CanisterSettings.tsx modules
+- Settings icon positioned alongside other header controls (Menu, Canister Info, Login)
+- Preserve all existing header functionality while adding settings access
+- Settings dialog provides interface for canister configuration and backend synchronization
+- Implement enhanced canister information modal system:
+  - Modal popup triggered by the wallet/canister button in the header
+  - Display both signed-in principal ID and backend canister ID when user is authenticated
+  - Two separate sections in the modal with proper spacing:
+    - "Signed-in Principal ID" section showing the user's full principal ID with copy button
+    - "Backend Canister ID" section showing the full canister ID with copy button
+  - Copy buttons for both IDs that copy the respective full IDs to clipboard
+  - Visual feedback for copy actions ("Copied!" message or icon change)
+  - Fallback text ("Not available") displayed when user is not signed in
+  - Basic error handling that displays "Error loading IDs" if either field fails to populate
+  - Include existing Disconnect button within the same modal for unified wallet/canister management
+  - Modal has proper accessibility attributes (ARIA labels, keyboard navigation, focus management)
+  - Clean styling consistent with Strange Waves UI theme with appropriate spacing for both ID sections
+  - Modal closes on click outside, "X" button, or escape key press
+  - Responsive design for both mobile and desktop devices
+  - Proper z-index and overlay styling to ensure modal appears above other content
+- Generate external integration utilities and components
+- Provide developer documentation and usage examples
+- Integrate with enhanced Audius public API for external music content with persistent storage
+- Search and retrieve Audius tracks with metadata
+- Store Audius track metadata when added to playlists for cross-session persistence
+- Display combined library of local and Audius content with source indicators and album artwork
+- Handle playback of local files and external Audius streams
+- Implement React Query for efficient API caching and loading states
+- Implement ICP-Lukso NFT bridge functionality with three specialized modules
+- Handle cross-chain NFT metadata synchronization and Universal Profile linking
+- Provide interfaces for DIP-721 to LSP7/LSP8 compatibility schema conversion
+- Require authentication (Internet Identity) for NFT minting operations
+- Use English as the application content language
+- Reorder tab navigation in AudioLibrary.tsx so "Playlists" tab appears before "All Files" tab
+- Enable public access to all uploaded tracks and saved playlists without requiring sign-in
+- Restrict authorized actions (upload, edit, delete) to signed-in owners while allowing public browsing and playback
+- Update UI states and access control checks in AudioLibrary.tsx to reflect public access changes
+- Ensure all content displays correctly for both authenticated and public users
+- Configure application for production deployment with live canister as primary storage
+- Remove any draft-to-live synchronization features as the live canister is the primary environment
