@@ -1,36 +1,45 @@
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Music, Sparkles, Loader2 } from 'lucide-react';
-import { useAudioFiles, useSearchAudiusTracks, useMintNFTWithParams, type CombinedAudio } from '../hooks/useQueries';
-import type { AudioFile } from '../backend';
-import { FileType } from '../backend';
-import { PlaylistManager } from './PlaylistManager';
-import { NFTMintDialog } from './NFTMintDialog';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Music, Search, Sparkles } from "lucide-react";
+import { useState } from "react";
+import type { AudioFile } from "../backend";
+import type { FileType } from "../backend";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import {
+  type CombinedAudio,
+  useAudioFiles,
+  useMintNFTWithParams,
+  useSearchAudiusTracks,
+} from "../hooks/useQueries";
+import { NFTMintDialog } from "./NFTMintDialog";
+import { PlaylistManager } from "./PlaylistManager";
 
 interface AudioLibraryProps {
   onSelectAudio: (audio: CombinedAudio) => void;
   selectedAudioId?: string;
 }
 
-export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('playlists');
+export function AudioLibrary({
+  onSelectAudio,
+  selectedAudioId,
+}: AudioLibraryProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("playlists");
   const { identity } = useInternetIdentity();
-  
+
   const { data: localFiles = [], isLoading: isLoadingLocal } = useAudioFiles();
-  const { data: audiusResults = [], isLoading: isLoadingAudius } = useSearchAudiusTracks(
-    searchQuery,
-    activeTab === 'audius' && searchQuery.length > 0
-  );
+  // Only pass the query when on the audius tab and there's a search term; otherwise pass empty string
+  const audiusQuery = activeTab === "audius" ? searchQuery : "";
+  const { data: audiusResults = [], isLoading: isLoadingAudius } =
+    useSearchAudiusTracks(audiusQuery);
 
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
-  const [selectedFileForMint, setSelectedFileForMint] = useState<AudioFile | null>(null);
+  const [selectedFileForMint, setSelectedFileForMint] =
+    useState<AudioFile | null>(null);
   const mintMutation = useMintNFTWithParams();
 
   const handleMintClick = (file: AudioFile) => {
@@ -91,9 +100,9 @@ export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryPro
           <Card
             key={file.id}
             className={`cursor-pointer transition-all hover:shadow-lg ${
-              selectedAudioId === file.id ? 'ring-2 ring-primary' : ''
+              selectedAudioId === file.id ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => onSelectAudio({ source: 'local', data: file })}
+            onClick={() => onSelectAudio({ source: "local", data: file })}
           >
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
@@ -112,7 +121,9 @@ export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryPro
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sm line-clamp-1">{file.title}</h3>
+                    <h3 className="font-semibold text-sm line-clamp-1">
+                      {file.title}
+                    </h3>
                     {identity && isOwner(file) && (
                       <Button
                         size="sm"
@@ -127,12 +138,17 @@ export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryPro
                       </Button>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{file.creator}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {file.creator}
+                  </p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="secondary" className="text-xs">
-                      {Math.floor(Number(file.duration) / 60)}:{(Number(file.duration) % 60).toString().padStart(2, '0')}
+                      {Math.floor(Number(file.duration) / 60)}:
+                      {(Number(file.duration) % 60).toString().padStart(2, "0")}
                     </Badge>
-                    <Badge variant="outline" className="text-xs">Local</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Local
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -180,17 +196,21 @@ export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryPro
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {audiusResults.map((track) => {
           // Handle artwork which can be an object with different sizes
-          const artworkUrl = typeof track.artwork === 'string' 
-            ? track.artwork 
-            : track.artwork?.['150x150'] || track.artwork?.['480x480'] || track.artwork?.['1000x1000'] || '';
+          const artworkUrl =
+            typeof track.artwork === "string"
+              ? track.artwork
+              : track.artwork?.["150x150"] ||
+                track.artwork?.["480x480"] ||
+                track.artwork?.["1000x1000"] ||
+                "";
 
           return (
             <Card
               key={track.id}
               className={`cursor-pointer transition-all hover:shadow-lg ${
-                selectedAudioId === track.id ? 'ring-2 ring-primary' : ''
+                selectedAudioId === track.id ? "ring-2 ring-primary" : ""
               }`}
-              onClick={() => onSelectAudio({ source: 'audius', data: track })}
+              onClick={() => onSelectAudio({ source: "audius", data: track })}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -208,13 +228,20 @@ export function AudioLibrary({ onSelectAudio, selectedAudioId }: AudioLibraryPro
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm line-clamp-1">{track.title}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{track.user.name}</p>
+                    <h3 className="font-semibold text-sm line-clamp-1">
+                      {track.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-1">
+                      {track.user.name}
+                    </p>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
-                        {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
+                        {Math.floor(track.duration / 60)}:
+                        {(track.duration % 60).toString().padStart(2, "0")}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">Audius</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Audius
+                      </Badge>
                     </div>
                   </div>
                 </div>

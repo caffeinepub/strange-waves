@@ -1,34 +1,49 @@
-import { useState, useCallback } from 'react';
-import { useUploadAudioFile, useMintNFT } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useActorReady } from '../hooks/useActorReady';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
-import { Upload, Music, Loader2, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
-import type { Genre, AudioFile } from '../backend';
-import { FileType } from '../backend';
-import { NFTMintDialog } from './NFTMintDialog';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertCircle,
+  Image as ImageIcon,
+  Loader2,
+  Music,
+  Upload,
+  X,
+} from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import type { AudioFile, Genre } from "../backend";
+import type { FileType } from "../backend";
+import { useActorReady } from "../hooks/useActorReady";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useMintNFT, useUploadAudioFile } from "../hooks/useQueries";
+import { NFTMintDialog } from "./NFTMintDialog";
 
 export function AudioUploader() {
   const { identity } = useInternetIdentity();
   const { isActorReady, isActorInitializing } = useActorReady();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-  
+
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
-  const [creator, setCreator] = useState('');
+  const [title, setTitle] = useState("");
+  const [creator, setCreator] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadedAudioFile, setUploadedAudioFile] = useState<AudioFile | null>(null);
+  const [uploadedAudioFile, setUploadedAudioFile] = useState<AudioFile | null>(
+    null,
+  );
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
 
   const uploadMutation = useUploadAudioFile();
@@ -48,48 +63,59 @@ export function AudioUploader() {
     }
   };
 
-  const validateAndSetAudioFile = (selectedFile: File) => {
-    const validTypes = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/m4a', 'audio/ogg'];
+  const validateAndSetAudioFile = useCallback(
+    (selectedFile: File) => {
+      const validTypes = [
+        "audio/mpeg",
+        "audio/wav",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/ogg",
+      ];
+      if (!validTypes.includes(selectedFile.type)) {
+        toast.error(
+          "Invalid file type. Please upload an audio file (MP3, WAV, M4A, OGG).",
+        );
+        return;
+      }
+
+      setAudioFile(selectedFile);
+      if (!title) {
+        setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
+      }
+
+      // Extract metadata
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(selectedFile);
+      audio.addEventListener("loadedmetadata", () => {
+        URL.revokeObjectURL(audio.src);
+      });
+    },
+    [title],
+  );
+
+  const validateAndSetImageFile = useCallback((selectedFile: File) => {
+    const validTypes = ["image/jpeg", "image/png", "image/jpg"];
     if (!validTypes.includes(selectedFile.type)) {
-      toast.error('Invalid file type. Please upload an audio file (MP3, WAV, M4A, OGG).');
-      return;
-    }
-
-    setAudioFile(selectedFile);
-    if (!title) {
-      setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
-    }
-
-    // Extract metadata
-    const audio = new Audio();
-    audio.src = URL.createObjectURL(selectedFile);
-    audio.addEventListener('loadedmetadata', () => {
-      URL.revokeObjectURL(audio.src);
-    });
-  };
-
-  const validateAndSetImageFile = (selectedFile: File) => {
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (!validTypes.includes(selectedFile.type)) {
-      toast.error('Invalid image type. Please upload a JPEG or PNG image.');
+      toast.error("Invalid image type. Please upload a JPEG or PNG image.");
       return;
     }
 
     // Check file size (max 5MB)
     if (selectedFile.size > 5 * 1024 * 1024) {
-      toast.error('Image file is too large. Maximum size is 5MB.');
+      toast.error("Image file is too large. Maximum size is 5MB.");
       return;
     }
 
     setImageFile(selectedFile);
-    
+
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(selectedFile);
-  };
+  }, []);
 
   const removeImage = () => {
     setImageFile(null);
@@ -106,33 +132,38 @@ export function AudioUploader() {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const files = Array.from(e.dataTransfer.files);
-    
-    // Separate audio and image files
-    const audioFiles = files.filter(f => f.type.startsWith('audio/'));
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    
-    if (audioFiles.length > 0) {
-      validateAndSetAudioFile(audioFiles[0]);
-    }
-    
-    if (imageFiles.length > 0) {
-      validateAndSetImageFile(imageFiles[0]);
-    }
-  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const files = Array.from(e.dataTransfer.files);
+
+      // Separate audio and image files
+      const audioFiles = files.filter((f) => f.type.startsWith("audio/"));
+      const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+
+      if (audioFiles.length > 0) {
+        validateAndSetAudioFile(audioFiles[0]);
+      }
+
+      if (imageFiles.length > 0) {
+        validateAndSetImageFile(imageFiles[0]);
+      }
+    },
+    [validateAndSetAudioFile, validateAndSetImageFile],
+  );
 
   const handleUpload = async () => {
     if (!audioFile || !title || !creator) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
 
@@ -142,9 +173,9 @@ export function AudioUploader() {
 
       const audio = new Audio();
       audio.src = URL.createObjectURL(audioFile);
-      
+
       await new Promise<void>((resolve) => {
-        audio.addEventListener('loadedmetadata', () => {
+        audio.addEventListener("loadedmetadata", () => {
           URL.revokeObjectURL(audio.src);
           resolve();
         });
@@ -155,7 +186,7 @@ export function AudioUploader() {
       const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       // Default genre to "other"
-      const genreValue: Genre = { __kind__: 'other', other: 'Unknown' };
+      const genreValue: Genre = { __kind__: "other", other: "Unknown" };
 
       // Prepare cover image if provided
       let coverImageData: Uint8Array | undefined = undefined;
@@ -179,20 +210,20 @@ export function AudioUploader() {
         },
       });
 
-      toast.success('Audio file uploaded successfully!');
-      
+      toast.success("Audio file uploaded successfully!");
+
       // Reset form
       setAudioFile(null);
       setImageFile(null);
       setImagePreview(null);
-      setTitle('');
-      setCreator('');
+      setTitle("");
+      setCreator("");
       setIsPublic(true);
       setUploadProgress(0);
       setUploadedAudioFile(null);
     } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload audio file');
+      console.error("Upload error:", error);
+      toast.error(error.message || "Failed to upload audio file");
     }
   };
 
@@ -220,7 +251,12 @@ export function AudioUploader() {
 
   // Show actor readiness status
   const showActorWarning = !isActorReady && !isActorInitializing;
-  const isUploadDisabled = !audioFile || !title || !creator || uploadMutation.isPending || !isActorReady;
+  const isUploadDisabled =
+    !audioFile ||
+    !title ||
+    !creator ||
+    uploadMutation.isPending ||
+    !isActorReady;
 
   return (
     <>
@@ -231,7 +267,8 @@ export function AudioUploader() {
             Upload Audio File
           </CardTitle>
           <CardDescription>
-            Upload your audio files with album artwork. Supported formats: MP3, WAV, M4A, OGG (audio) | JPEG, PNG (images)
+            Upload your audio files with album artwork. Supported formats: MP3,
+            WAV, M4A, OGG (audio) | JPEG, PNG (images)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -244,7 +281,7 @@ export function AudioUploader() {
               </AlertDescription>
             </Alert>
           )}
-          
+
           {showActorWarning && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -261,13 +298,14 @@ export function AudioUploader() {
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50'
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50"
             }`}
           >
             <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your audio file and album artwork here, or click to browse
+              Drag and drop your audio file and album artwork here, or click to
+              browse
             </p>
             <div className="flex gap-2 justify-center">
               <Input
@@ -279,14 +317,19 @@ export function AudioUploader() {
                 disabled={!isActorReady}
               />
               <Label htmlFor="audio-file-upload">
-                <Button variant="outline" className="cursor-pointer" asChild disabled={!isActorReady}>
+                <Button
+                  variant="outline"
+                  className="cursor-pointer"
+                  asChild
+                  disabled={!isActorReady}
+                >
                   <span>
                     <Music className="mr-2 h-4 w-4" />
                     Choose Audio
                   </span>
                 </Button>
               </Label>
-              
+
               <Input
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
@@ -296,7 +339,12 @@ export function AudioUploader() {
                 disabled={!isActorReady}
               />
               <Label htmlFor="image-file-upload">
-                <Button variant="outline" className="cursor-pointer" asChild disabled={!isActorReady}>
+                <Button
+                  variant="outline"
+                  className="cursor-pointer"
+                  asChild
+                  disabled={!isActorReady}
+                >
                   <span>
                     <ImageIcon className="mr-2 h-4 w-4" />
                     Choose Image
@@ -304,7 +352,7 @@ export function AudioUploader() {
                 </Button>
               </Label>
             </div>
-            
+
             <div className="mt-4 space-y-2">
               {audioFile && (
                 <p className="text-sm font-medium flex items-center justify-center gap-2">
@@ -401,7 +449,7 @@ export function AudioUploader() {
             ) : !isActorReady ? (
               <>
                 <AlertCircle className="mr-2 h-4 w-4" />
-                {isActorInitializing ? 'Initializing...' : 'Not Ready'}
+                {isActorInitializing ? "Initializing..." : "Not Ready"}
               </>
             ) : (
               <>

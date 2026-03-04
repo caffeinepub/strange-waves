@@ -4,18 +4,14 @@ import List "mo:core/List";
 import Principal "mo:core/Principal";
 import Int "mo:core/Int";
 import Nat "mo:core/Nat";
+import Time "mo:core/Time";
 import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
-import Time "mo:core/Time";
-import Migration "migration";
-
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-// Use explicit migration function, mutate fields and migrate old persistent data.
-(with migration = Migration.run)
 actor {
   include MixinStorage();
 
@@ -50,6 +46,7 @@ actor {
     isPublic : Bool;
     owner : ?Principal;
     coverImage : ?Storage.ExternalBlob;
+    albumId : ?Text; // Added association to album
   };
 
   public type Playlist = {
@@ -108,7 +105,6 @@ actor {
     #invalidInput : Text;
   };
 
-  // In-app wallet support
   public type WalletType = {
     #inAppWallet;
     #plugWallet;
@@ -154,6 +150,47 @@ actor {
     params : NFTParameters;
   };
 
+  public type AlbumTier = {
+    name : Text;
+    price : Nat;
+    supply : Nat;
+    description : Text;
+  };
+
+  public type Album = {
+    id : Text;
+    name : Text;
+    description : Text;
+    theme : Text;
+    trackIds : List.List<Text>;
+    listenerTier : AlbumTier;
+    collectorTier : AlbumTier;
+    investorTier : AlbumTier;
+    creationTimestamp : Int;
+  };
+
+  public type AlbumView = {
+    id : Text;
+    name : Text;
+    description : Text;
+    theme : Text;
+    trackIds : [Text];
+    listenerTier : AlbumTier;
+    collectorTier : AlbumTier;
+    investorTier : AlbumTier;
+    creationTimestamp : Int;
+  };
+
+  public type AlbumInput = {
+    id : Text;
+    name : Text;
+    description : Text;
+    theme : Text;
+    listenerTier : AlbumTier;
+    collectorTier : AlbumTier;
+    investorTier : AlbumTier;
+  };
+
   public type AudiusTrack = {
     id : Text;
     title : Text;
@@ -162,19 +199,25 @@ actor {
     streamUrl : Text;
   };
 
-  // Storage maps
+  let albums = Map.empty<Text, Album>();
   let audioFiles = Map.empty<Text, AudioFile>();
   let playlists = Map.empty<Text, Playlist>();
   var userProfiles = Map.empty<Principal, UserProfile>();
   let nftRecords = Map.empty<Nat, NFTRecord>();
   var nftCounter : Nat = 0;
-
   let nftRecordsWithParams = Map.empty<Nat, NFTRecordWithParams>();
   var nftWithParamsCounter : Nat = 0;
 
+  // Convert Album to AlbumView (immutable)
+  func toAlbumView(album : Album) : AlbumView {
+    {
+      album with
+      trackIds = album.trackIds.toArray();
+    };
+  };
+
   // ===== USER PROFILE MANAGEMENT =====
 
-  // Get caller's own profile - requires user authentication
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can access profiles");
@@ -182,7 +225,6 @@ actor {
     userProfiles.get(caller);
   };
 
-  // Save caller's own profile - requires user authentication
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
@@ -190,9 +232,7 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Get another user's profile - requires authentication and ownership check
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    // Users can view their own profile, admins can view any profile
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
@@ -201,14 +241,11 @@ actor {
 
   // ===== NFT MINTING WITH PARAMETERS =====
 
-  // NFT mint with params (ICP DIP-721) - requires user authentication
   public shared ({ caller }) func mintNFTwithParams(request : MintNFTWithParamsRequest) : async MintNFTResponse {
-    // Authorization: Only authenticated users can mint NFTs
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       return #unauthorized;
     };
 
-    // Validate input
     if (request.title == "") {
       return #invalidInput("Title cannot be empty");
     };
@@ -234,12 +271,10 @@ actor {
       };
     };
 
-    // Validate royalty percentage
     if (request.params.royaltyPercentage > 100) {
       return #invalidInput("Royalty percentage cannot exceed 100");
     };
 
-    // Validate revenue split percentages
     let totalPercentage = request.params.revenueSplits.foldLeft(
       0,
       func(acc : Nat, split : RevenueSplit) : Nat { acc + split.percentage },
@@ -249,12 +284,10 @@ actor {
       return #invalidInput("Revenue split percentages must total 100");
     };
 
-    // Validate revenue split addresses are not empty
     if (request.params.revenueSplits.size() == 0) {
       return #invalidInput("At least one revenue split address required");
     };
 
-    // Create NFT metadata
     let metadata : NFTMetadata = {
       artist = request.artist;
       title = request.title;
@@ -268,7 +301,6 @@ actor {
       };
     };
 
-    // Store NFT record (DIP-721 compatible)
     let record : NFTRecordWithParams = {
       audioBlob = request.audioBlob;
       imageBlob = request.imageBlob;
@@ -283,17 +315,14 @@ actor {
     #ok(nftId);
   };
 
-  // Public query - get NFT with params by ID (no auth required - public access)
   public query func getNFTRecordWithParams(nftId : Nat) : async ?NFTRecordWithParams {
     nftRecordsWithParams.get(nftId);
   };
 
-  // Public query - get all NFT with params records (no auth required - public access)
   public query func getAllNFTRecordsWithParams() : async [NFTRecordWithParams] {
     nftRecordsWithParams.values().toArray();
   };
 
-  // Get NFTs owned by caller - requires user authentication
   public query ({ caller }) func getCallerNFTRecordsWithParams() : async [NFTRecordWithParams] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view their NFTs");
@@ -306,14 +335,11 @@ actor {
 
   // ===== LEGACY NFT METHODS (WITHOUT PARAMS) =====
 
-  // Old NFT mint method - requires user authentication
   public shared ({ caller }) func mintNFT(request : MintNFTRequest) : async MintNFTResponse {
-    // Authorization: Only authenticated users can mint NFTs
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       return #unauthorized;
     };
 
-    // Validate input
     if (request.title == "") {
       return #invalidInput("Title cannot be empty");
     };
@@ -321,7 +347,6 @@ actor {
       return #invalidInput("Artist cannot be empty");
     };
 
-    // Validate file type matches provided blobs
     switch (request.fileType) {
       case (#audio) {
         if (request.audioBlob == null) {
@@ -340,7 +365,6 @@ actor {
       };
     };
 
-    // Create NFT metadata
     let metadata : NFTMetadata = {
       artist = request.artist;
       title = request.title;
@@ -354,14 +378,12 @@ actor {
       };
     };
 
-    // Create NFT record
     let nftRecord : NFTRecord = {
       audioBlob = request.audioBlob;
       imageBlob = request.imageBlob;
       metadata = metadata;
     };
 
-    // Store NFT record
     let nftId = nftCounter;
     nftRecords.add(nftId, nftRecord);
     nftCounter += 1;
@@ -369,12 +391,10 @@ actor {
     #ok(nftId);
   };
 
-  // Public query - legacy get NFT by id (no auth required - public access)
   public query func getNFTRecord(nftId : Nat) : async ?NFTRecord {
     nftRecords.get(nftId);
   };
 
-  // Public query - legacy get all NFTs without params (no auth required - public access)
   public query func getAllNFTRecords() : async [NFTRecord] {
     nftRecords.values().toArray();
   };
@@ -390,7 +410,6 @@ actor {
     };
   };
 
-  // Create playlist - requires user authentication
   public shared ({ caller }) func createPlaylist(id : Text, title : Text) : async PlaylistView {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can create playlists");
@@ -414,7 +433,6 @@ actor {
     };
   };
 
-  // Get all playlists for caller - requires user authentication
   public query ({ caller }) func getCallerPlaylists() : async [PlaylistView] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view their playlists");
@@ -426,7 +444,6 @@ actor {
       .toArray();
   };
 
-  // Get specific playlist by ID - public access for viewing
   public query func getPlaylist(id : Text) : async ?PlaylistView {
     switch (playlists.get(id)) {
       case (?playlist) { ?toPlaylistView(playlist) };
@@ -434,12 +451,10 @@ actor {
     };
   };
 
-  // Get all playlists - public access for browsing
   public query func getAllPlaylists() : async [PlaylistView] {
     playlists.values().map(toPlaylistView).toArray();
   };
 
-  // Update playlist title - requires user authentication and ownership
   public shared ({ caller }) func updatePlaylistTitle(id : Text, newTitle : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can update playlists");
@@ -447,7 +462,6 @@ actor {
 
     switch (playlists.get(id)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only update your own playlists");
         };
@@ -460,7 +474,6 @@ actor {
     };
   };
 
-  // Add track to playlist - requires user authentication and ownership
   public shared ({ caller }) func addTrackToPlaylist(playlistId : Text, trackId : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can modify playlists");
@@ -468,7 +481,6 @@ actor {
 
     switch (playlists.get(playlistId)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only modify your own playlists");
         };
@@ -479,7 +491,6 @@ actor {
     };
   };
 
-  // Remove track from playlist - requires user authentication and ownership
   public shared ({ caller }) func removeTrackFromPlaylist(playlistId : Text, trackId : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can modify playlists");
@@ -487,7 +498,6 @@ actor {
 
     switch (playlists.get(playlistId)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only modify your own playlists");
         };
@@ -501,7 +511,6 @@ actor {
     };
   };
 
-  // Add Audius track to playlist - requires user authentication and ownership
   public shared ({ caller }) func addAudiusTrackToPlaylist(playlistId : Text, track : AudiusTrack) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can modify playlists");
@@ -509,7 +518,6 @@ actor {
 
     switch (playlists.get(playlistId)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only modify your own playlists");
         };
@@ -520,7 +528,6 @@ actor {
     };
   };
 
-  // Remove Audius track from playlist - requires user authentication and ownership
   public shared ({ caller }) func removeAudiusTrackFromPlaylist(playlistId : Text, trackId : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can modify playlists");
@@ -528,7 +535,6 @@ actor {
 
     switch (playlists.get(playlistId)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only modify your own playlists");
         };
@@ -542,7 +548,6 @@ actor {
     };
   };
 
-  // Delete playlist - requires user authentication and ownership
   public shared ({ caller }) func deletePlaylist(id : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can delete playlists");
@@ -550,7 +555,6 @@ actor {
 
     switch (playlists.get(id)) {
       case (?playlist) {
-        // Verify ownership
         if (playlist.owner != caller) {
           Runtime.trap("Unauthorized: Can only delete your own playlists");
         };
@@ -562,13 +566,11 @@ actor {
 
   // ===== AUDIO FILE MANAGEMENT =====
 
-  // Upload audio file - requires user authentication
   public shared ({ caller }) func uploadAudioFile(file : AudioFile) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can upload audio files");
     };
 
-    // Set owner to caller
     let fileWithOwner : AudioFile = {
       file with owner = ?caller;
     };
@@ -577,17 +579,34 @@ actor {
     file.id;
   };
 
-  // Get all audio files - public access
+  public shared ({ caller }) func uploadTrackWithAlbum(file : AudioFile, albumId : ?Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can upload audio files");
+    };
+
+    let fileWithOwner : AudioFile = {
+      file with albumId;
+      owner = ?caller;
+    };
+
+    audioFiles.add(file.id, fileWithOwner);
+    file.id;
+  };
+
   public query func getAllAudioFiles() : async [AudioFile] {
     audioFiles.values().toArray();
   };
 
-  // Get specific audio file - public access
+  public query func getAudioFilesByAlbum(albumId : Text) : async [AudioFile] {
+    audioFiles.values()
+      .filter(func(file) { switch (file.albumId) { case (?id) { id == albumId }; case (null) { false } } })
+      .toArray();
+  };
+
   public query func getAudioFile(id : Text) : async ?AudioFile {
     audioFiles.get(id);
   };
 
-  // Get caller's audio files - requires user authentication
   public query ({ caller }) func getCallerAudioFiles() : async [AudioFile] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view their audio files");
@@ -603,7 +622,6 @@ actor {
       .toArray();
   };
 
-  // Delete audio file - requires user authentication and ownership
   public shared ({ caller }) func deleteAudioFile(id : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can delete audio files");
@@ -611,15 +629,16 @@ actor {
 
     switch (audioFiles.get(id)) {
       case (?file) {
-        // Verify ownership
         switch (file.owner) {
           case (?owner) {
-            if (owner != caller) {
+            if (owner != caller and not AccessControl.isAdmin(accessControlState, caller)) {
               Runtime.trap("Unauthorized: Can only delete your own audio files");
             };
           };
           case (null) {
-            Runtime.trap("Unauthorized: Cannot delete files without owner");
+            if (not AccessControl.isAdmin(accessControlState, caller)) {
+              Runtime.trap("Unauthorized: Cannot delete files without owner");
+            };
           };
         };
         audioFiles.remove(id);
@@ -628,9 +647,95 @@ actor {
     };
   };
 
-  // ===== CANISTER INFORMATION =====
+  // ===== ALBUM MANAGEMENT =====
 
-  // Get canister ID - public access
+  public shared ({ caller }) func createAlbum(input : AlbumInput) : async AlbumView {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can create albums");
+    };
+
+    let existingAlbum = albums.get(input.id);
+    switch (existingAlbum) {
+      case (?_) { Runtime.trap("Album with this ID already exists") };
+      case (null) {
+        let newAlbum : Album = {
+          id = input.id;
+          name = input.name;
+          description = input.description;
+          theme = input.theme;
+          trackIds = List.empty<Text>();
+          listenerTier = input.listenerTier;
+          collectorTier = input.collectorTier;
+          investorTier = input.investorTier;
+          creationTimestamp = Time.now();
+        };
+        albums.add(input.id, newAlbum);
+        toAlbumView(newAlbum);
+      };
+    };
+  };
+
+  public query func getAlbum(id : Text) : async ?AlbumView {
+    switch (albums.get(id)) {
+      case (?album) { ?toAlbumView(album) };
+      case (null) { null };
+    };
+  };
+
+  public query func listAlbums() : async [AlbumView] {
+    albums.values().map(func(album) { toAlbumView(album) }).toArray();
+  };
+
+  public shared ({ caller }) func updateAlbum(id : Text, input : AlbumInput) : async AlbumView {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update albums");
+    };
+
+    switch (albums.get(id)) {
+      case (?existing) {
+        let updatedAlbum : Album = {
+          existing with
+          name = input.name;
+          description = input.description;
+          theme = input.theme;
+          listenerTier = input.listenerTier;
+          collectorTier = input.collectorTier;
+          investorTier = input.investorTier;
+        };
+        albums.add(id, updatedAlbum);
+        toAlbumView(updatedAlbum);
+      };
+      case (null) { Runtime.trap("Album not found") };
+    };
+  };
+
+  public shared ({ caller }) func deleteAlbum(id : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete albums");
+    };
+
+    switch (albums.get(id)) {
+      case (?_) {
+        albums.remove(id);
+      };
+      case (null) { Runtime.trap("Album not found") };
+    };
+  };
+
+  public shared ({ caller }) func addTrackToAlbum(albumId : Text, trackId : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add tracks to albums");
+    };
+
+    switch (albums.get(albumId)) {
+      case (?album) {
+        album.trackIds.add(trackId);
+        albums.add(albumId, album);
+      };
+      case (null) { Runtime.trap("Album not found") };
+    };
+  };
+
   public query func getCanisterId() : async Principal {
     getSelfPrincipal();
   };

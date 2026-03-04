@@ -97,6 +97,17 @@ export interface PlaylistView {
     trackIds: Array<string>;
     audiusTracks: Array<AudiusTrack>;
 }
+export interface AlbumView {
+    id: string;
+    theme: string;
+    listenerTier: AlbumTier;
+    creationTimestamp: bigint;
+    name: string;
+    description: string;
+    collectorTier: AlbumTier;
+    trackIds: Array<string>;
+    investorTier: AlbumTier;
+}
 export interface _CaffeineStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
@@ -143,6 +154,7 @@ export interface AudioFile {
     uploadTimestamp: bigint;
     coverImage?: ExternalBlob;
     genre: Genre;
+    albumId?: string;
     isPublic: boolean;
 }
 export interface NFTRecord {
@@ -176,6 +188,12 @@ export interface AudiusTrack {
     streamUrl: string;
     artist: string;
 }
+export interface AlbumTier {
+    name: string;
+    description: string;
+    supply: bigint;
+    price: bigint;
+}
 export interface MintNFTWithParamsRequest {
     title: string;
     imageBlob?: ExternalBlob;
@@ -194,6 +212,15 @@ export interface NFTMetadata {
     originalContentId: string;
     mintTimestamp: bigint;
     artist: string;
+}
+export interface AlbumInput {
+    id: string;
+    theme: string;
+    listenerTier: AlbumTier;
+    name: string;
+    description: string;
+    collectorTier: AlbumTier;
+    investorTier: AlbumTier;
 }
 export interface RevenueSplit {
     address: Principal;
@@ -240,16 +267,21 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addAudiusTrackToPlaylist(playlistId: string, track: AudiusTrack): Promise<void>;
+    addTrackToAlbum(albumId: string, trackId: string): Promise<void>;
     addTrackToPlaylist(playlistId: string, trackId: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createAlbum(input: AlbumInput): Promise<AlbumView>;
     createPlaylist(id: string, title: string): Promise<PlaylistView>;
+    deleteAlbum(id: string): Promise<void>;
     deleteAudioFile(id: string): Promise<void>;
     deletePlaylist(id: string): Promise<void>;
+    getAlbum(id: string): Promise<AlbumView | null>;
     getAllAudioFiles(): Promise<Array<AudioFile>>;
     getAllNFTRecords(): Promise<Array<NFTRecord>>;
     getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
     getAllPlaylists(): Promise<Array<PlaylistView>>;
     getAudioFile(id: string): Promise<AudioFile | null>;
+    getAudioFilesByAlbum(albumId: string): Promise<Array<AudioFile>>;
     getCallerAudioFiles(): Promise<Array<AudioFile>>;
     getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
     getCallerPlaylists(): Promise<Array<PlaylistView>>;
@@ -261,15 +293,18 @@ export interface backendInterface {
     getPlaylist(id: string): Promise<PlaylistView | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listAlbums(): Promise<Array<AlbumView>>;
     mintNFT(request: MintNFTRequest): Promise<MintNFTResponse>;
     mintNFTwithParams(request: MintNFTWithParamsRequest): Promise<MintNFTResponse>;
     removeAudiusTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
     removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    updateAlbum(id: string, input: AlbumInput): Promise<AlbumView>;
     updatePlaylistTitle(id: string, newTitle: string): Promise<void>;
     uploadAudioFile(file: AudioFile): Promise<string>;
+    uploadTrackWithAlbum(file: AudioFile, albumId: string | null): Promise<string>;
 }
-import type { AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -384,6 +419,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addTrackToAlbum(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addTrackToAlbum(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addTrackToAlbum(arg0, arg1);
+            return result;
+        }
+    }
     async addTrackToPlaylist(arg0: string, arg1: string): Promise<void> {
         if (this.processError) {
             try {
@@ -412,6 +461,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createAlbum(arg0: AlbumInput): Promise<AlbumView> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createAlbum(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createAlbum(arg0);
+            return result;
+        }
+    }
     async createPlaylist(arg0: string, arg1: string): Promise<PlaylistView> {
         if (this.processError) {
             try {
@@ -423,6 +486,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.createPlaylist(arg0, arg1);
+            return result;
+        }
+    }
+    async deleteAlbum(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteAlbum(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteAlbum(arg0);
             return result;
         }
     }
@@ -454,46 +531,60 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAlbum(arg0: string): Promise<AlbumView | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAlbum(arg0);
+                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAlbum(arg0);
+            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getAllAudioFiles(): Promise<Array<AudioFile>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllAudioFiles();
-                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllAudioFiles();
-            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAllNFTRecords(): Promise<Array<NFTRecord>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllNFTRecords();
-                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n20(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllNFTRecords();
-            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n20(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllNFTRecordsWithParams();
-                return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n27(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllNFTRecordsWithParams();
-            return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n27(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAllPlaylists(): Promise<Array<PlaylistView>> {
@@ -514,42 +605,56 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getAudioFile(arg0);
-                return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n34(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAudioFile(arg0);
-            return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n34(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAudioFilesByAlbum(arg0: string): Promise<Array<AudioFile>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAudioFilesByAlbum(arg0);
+                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAudioFilesByAlbum(arg0);
+            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerAudioFiles(): Promise<Array<AudioFile>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerAudioFiles();
-                return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerAudioFiles();
-            return from_candid_vec_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerNFTRecordsWithParams();
-                return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n27(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerNFTRecordsWithParams();
-            return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n27(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerPlaylists(): Promise<Array<PlaylistView>> {
@@ -570,28 +675,28 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n35(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n35(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n37(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n38(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n37(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n38(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCanisterId(): Promise<Principal> {
@@ -612,56 +717,56 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getNFTRecord(arg0);
-                return from_candid_opt_n39(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getNFTRecord(arg0);
-            return from_candid_opt_n39(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getNFTRecordWithParams(arg0: bigint): Promise<NFTRecordWithParams | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getNFTRecordWithParams(arg0);
                 return from_candid_opt_n40(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getNFTRecordWithParams(arg0);
+            const result = await this.actor.getNFTRecord(arg0);
             return from_candid_opt_n40(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getPlaylist(arg0: string): Promise<PlaylistView | null> {
+    async getNFTRecordWithParams(arg0: bigint): Promise<NFTRecordWithParams | null> {
         if (this.processError) {
             try {
-                const result = await this.actor.getPlaylist(arg0);
+                const result = await this.actor.getNFTRecordWithParams(arg0);
                 return from_candid_opt_n41(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getPlaylist(arg0);
+            const result = await this.actor.getNFTRecordWithParams(arg0);
             return from_candid_opt_n41(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getPlaylist(arg0: string): Promise<PlaylistView | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPlaylist(arg0);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPlaylist(arg0);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n35(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n35(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -678,32 +783,46 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async mintNFT(arg0: MintNFTRequest): Promise<MintNFTResponse> {
+    async listAlbums(): Promise<Array<AlbumView>> {
         if (this.processError) {
             try {
-                const result = await this.actor.mintNFT(await to_candid_MintNFTRequest_n42(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_MintNFTResponse_n47(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.listAlbums();
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.mintNFT(await to_candid_MintNFTRequest_n42(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_MintNFTResponse_n47(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.listAlbums();
+            return result;
+        }
+    }
+    async mintNFT(arg0: MintNFTRequest): Promise<MintNFTResponse> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.mintNFT(await to_candid_MintNFTRequest_n43(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_MintNFTResponse_n48(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.mintNFT(await to_candid_MintNFTRequest_n43(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_MintNFTResponse_n48(this._uploadFile, this._downloadFile, result);
         }
     }
     async mintNFTwithParams(arg0: MintNFTWithParamsRequest): Promise<MintNFTResponse> {
         if (this.processError) {
             try {
-                const result = await this.actor.mintNFTwithParams(await to_candid_MintNFTWithParamsRequest_n49(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_MintNFTResponse_n47(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.mintNFTwithParams(await to_candid_MintNFTWithParamsRequest_n50(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_MintNFTResponse_n48(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.mintNFTwithParams(await to_candid_MintNFTWithParamsRequest_n49(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_MintNFTResponse_n47(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.mintNFTwithParams(await to_candid_MintNFTWithParamsRequest_n50(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_MintNFTResponse_n48(this._uploadFile, this._downloadFile, result);
         }
     }
     async removeAudiusTrackFromPlaylist(arg0: string, arg1: string): Promise<void> {
@@ -737,14 +856,28 @@ export class Backend implements backendInterface {
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n55(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n56(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n55(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n56(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async updateAlbum(arg0: string, arg1: AlbumInput): Promise<AlbumView> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateAlbum(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateAlbum(arg0, arg1);
             return result;
         }
     }
@@ -765,79 +898,96 @@ export class Backend implements backendInterface {
     async uploadAudioFile(arg0: AudioFile): Promise<string> {
         if (this.processError) {
             try {
-                const result = await this.actor.uploadAudioFile(await to_candid_AudioFile_n57(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.uploadAudioFile(await to_candid_AudioFile_n58(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.uploadAudioFile(await to_candid_AudioFile_n57(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.uploadAudioFile(await to_candid_AudioFile_n58(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async uploadTrackWithAlbum(arg0: AudioFile, arg1: string | null): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.uploadTrackWithAlbum(await to_candid_AudioFile_n58(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n62(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.uploadTrackWithAlbum(await to_candid_AudioFile_n58(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n62(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
 }
-async function from_candid_AudioFile_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFile): Promise<AudioFile> {
-    return await from_candid_record_n12(_uploadFile, _downloadFile, value);
+async function from_candid_AudioFile_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFile): Promise<AudioFile> {
+    return await from_candid_record_n13(_uploadFile, _downloadFile, value);
 }
-async function from_candid_ExternalBlob_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
+async function from_candid_ExternalBlob_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
     return await _downloadFile(value);
 }
-function from_candid_FileType_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _FileType): FileType {
-    return from_candid_variant_n24(_uploadFile, _downloadFile, value);
+function from_candid_FileType_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _FileType): FileType {
+    return from_candid_variant_n26(_uploadFile, _downloadFile, value);
 }
-function from_candid_Genre_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Genre): Genre {
-    return from_candid_variant_n17(_uploadFile, _downloadFile, value);
+function from_candid_Genre_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Genre): Genre {
+    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
 }
-function from_candid_MintNFTResponse_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _MintNFTResponse): MintNFTResponse {
-    return from_candid_variant_n48(_uploadFile, _downloadFile, value);
+function from_candid_MintNFTResponse_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _MintNFTResponse): MintNFTResponse {
+    return from_candid_variant_n49(_uploadFile, _downloadFile, value);
 }
-function from_candid_NFTMetadata_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTMetadata): NFTMetadata {
-    return from_candid_record_n22(_uploadFile, _downloadFile, value);
+function from_candid_NFTMetadata_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTMetadata): NFTMetadata {
+    return from_candid_record_n24(_uploadFile, _downloadFile, value);
 }
-function from_candid_NFTParameters_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTParameters): NFTParameters {
-    return from_candid_record_n29(_uploadFile, _downloadFile, value);
+function from_candid_NFTParameters_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTParameters): NFTParameters {
+    return from_candid_record_n31(_uploadFile, _downloadFile, value);
 }
-async function from_candid_NFTRecordWithParams_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecordWithParams): Promise<NFTRecordWithParams> {
-    return await from_candid_record_n27(_uploadFile, _downloadFile, value);
+async function from_candid_NFTRecordWithParams_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecordWithParams): Promise<NFTRecordWithParams> {
+    return await from_candid_record_n29(_uploadFile, _downloadFile, value);
 }
-async function from_candid_NFTRecord_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecord): Promise<NFTRecord> {
-    return await from_candid_record_n20(_uploadFile, _downloadFile, value);
+async function from_candid_NFTRecord_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecord): Promise<NFTRecord> {
+    return await from_candid_record_n22(_uploadFile, _downloadFile, value);
 }
-function from_candid_StableCoin_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StableCoin): StableCoin {
-    return from_candid_variant_n31(_uploadFile, _downloadFile, value);
+function from_candid_StableCoin_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StableCoin): StableCoin {
+    return from_candid_variant_n33(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserProfile_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
-    return from_candid_record_n35(_uploadFile, _downloadFile, value);
+function from_candid_UserProfile_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
+    return from_candid_record_n37(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n38(_uploadFile, _downloadFile, value);
+function from_candid_UserRole_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n39(_uploadFile, _downloadFile, value);
 }
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Principal]): Principal | null {
+function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_AlbumView]): AlbumView | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_opt_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExternalBlob]): Promise<ExternalBlob | null> {
-    return value.length === 0 ? null : await from_candid_ExternalBlob_n14(_uploadFile, _downloadFile, value[0]);
-}
-async function from_candid_opt_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_AudioFile]): Promise<AudioFile | null> {
-    return value.length === 0 ? null : await from_candid_AudioFile_n11(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
-    return value.length === 0 ? null : from_candid_UserProfile_n34(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+function from_candid_opt_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Principal]): Principal | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_opt_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_NFTRecord]): Promise<NFTRecord | null> {
-    return value.length === 0 ? null : await from_candid_NFTRecord_n19(_uploadFile, _downloadFile, value[0]);
+async function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExternalBlob]): Promise<ExternalBlob | null> {
+    return value.length === 0 ? null : await from_candid_ExternalBlob_n15(_uploadFile, _downloadFile, value[0]);
 }
-async function from_candid_opt_n40(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_NFTRecordWithParams]): Promise<NFTRecordWithParams | null> {
-    return value.length === 0 ? null : await from_candid_NFTRecordWithParams_n26(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+    return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PlaylistView]): PlaylistView | null {
+async function from_candid_opt_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_AudioFile]): Promise<AudioFile | null> {
+    return value.length === 0 ? null : await from_candid_AudioFile_n12(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : from_candid_UserProfile_n36(_uploadFile, _downloadFile, value[0]);
+}
+async function from_candid_opt_n40(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_NFTRecord]): Promise<NFTRecord | null> {
+    return value.length === 0 ? null : await from_candid_NFTRecord_n21(_uploadFile, _downloadFile, value[0]);
+}
+async function from_candid_opt_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_NFTRecordWithParams]): Promise<NFTRecordWithParams | null> {
+    return value.length === 0 ? null : await from_candid_NFTRecordWithParams_n28(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PlaylistView]): PlaylistView | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
@@ -846,7 +996,7 @@ function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     title: string;
     creator: string;
@@ -857,6 +1007,7 @@ async function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promi
     uploadTimestamp: bigint;
     coverImage: [] | [_ExternalBlob];
     genre: _Genre;
+    albumId: [] | [string];
     isPublic: boolean;
 }): Promise<{
     id: string;
@@ -869,6 +1020,7 @@ async function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promi
     uploadTimestamp: bigint;
     coverImage?: ExternalBlob;
     genre: Genre;
+    albumId?: string;
     isPublic: boolean;
 }> {
     return {
@@ -876,16 +1028,17 @@ async function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promi
         title: value.title,
         creator: value.creator,
         duration: value.duration,
-        owner: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.owner)),
-        blob: await from_candid_ExternalBlob_n14(_uploadFile, _downloadFile, value.blob),
+        owner: record_opt_to_undefined(from_candid_opt_n14(_uploadFile, _downloadFile, value.owner)),
+        blob: await from_candid_ExternalBlob_n15(_uploadFile, _downloadFile, value.blob),
         size: value.size,
         uploadTimestamp: value.uploadTimestamp,
-        coverImage: record_opt_to_undefined(await from_candid_opt_n15(_uploadFile, _downloadFile, value.coverImage)),
-        genre: from_candid_Genre_n16(_uploadFile, _downloadFile, value.genre),
+        coverImage: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.coverImage)),
+        genre: from_candid_Genre_n17(_uploadFile, _downloadFile, value.genre),
+        albumId: record_opt_to_undefined(from_candid_opt_n19(_uploadFile, _downloadFile, value.albumId)),
         isPublic: value.isPublic
     };
 }
-async function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     imageBlob: [] | [_ExternalBlob];
     metadata: _NFTMetadata;
     audioBlob: [] | [_ExternalBlob];
@@ -895,12 +1048,12 @@ async function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promi
     audioBlob?: ExternalBlob;
 }> {
     return {
-        imageBlob: record_opt_to_undefined(await from_candid_opt_n15(_uploadFile, _downloadFile, value.imageBlob)),
-        metadata: from_candid_NFTMetadata_n21(_uploadFile, _downloadFile, value.metadata),
-        audioBlob: record_opt_to_undefined(await from_candid_opt_n15(_uploadFile, _downloadFile, value.audioBlob))
+        imageBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.imageBlob)),
+        metadata: from_candid_NFTMetadata_n23(_uploadFile, _downloadFile, value.metadata),
+        audioBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.audioBlob))
     };
 }
-function from_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     title: string;
     owner: Principal;
     description: string;
@@ -921,13 +1074,13 @@ function from_candid_record_n22(_uploadFile: (file: ExternalBlob) => Promise<Uin
         title: value.title,
         owner: value.owner,
         description: value.description,
-        fileType: from_candid_FileType_n23(_uploadFile, _downloadFile, value.fileType),
+        fileType: from_candid_FileType_n25(_uploadFile, _downloadFile, value.fileType),
         originalContentId: value.originalContentId,
         mintTimestamp: value.mintTimestamp,
         artist: value.artist
     };
 }
-async function from_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     imageBlob: [] | [_ExternalBlob];
     metadata: _NFTMetadata;
     audioBlob: [] | [_ExternalBlob];
@@ -939,13 +1092,13 @@ async function from_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promi
     params: NFTParameters;
 }> {
     return {
-        imageBlob: record_opt_to_undefined(await from_candid_opt_n15(_uploadFile, _downloadFile, value.imageBlob)),
-        metadata: from_candid_NFTMetadata_n21(_uploadFile, _downloadFile, value.metadata),
-        audioBlob: record_opt_to_undefined(await from_candid_opt_n15(_uploadFile, _downloadFile, value.audioBlob)),
-        params: from_candid_NFTParameters_n28(_uploadFile, _downloadFile, value.params)
+        imageBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.imageBlob)),
+        metadata: from_candid_NFTMetadata_n23(_uploadFile, _downloadFile, value.metadata),
+        audioBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.audioBlob)),
+        params: from_candid_NFTParameters_n30(_uploadFile, _downloadFile, value.params)
     };
 }
-function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     stableCoin: _StableCoin;
     revenueSplits: Array<_RevenueSplit>;
     price: bigint;
@@ -957,13 +1110,13 @@ function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uin
     royaltyPercentage: bigint;
 } {
     return {
-        stableCoin: from_candid_StableCoin_n30(_uploadFile, _downloadFile, value.stableCoin),
+        stableCoin: from_candid_StableCoin_n32(_uploadFile, _downloadFile, value.stableCoin),
         revenueSplits: value.revenueSplits,
         price: value.price,
         royaltyPercentage: value.royaltyPercentage
     };
 }
-function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     bio: [] | [string];
     name: string;
     email: [] | [string];
@@ -973,9 +1126,9 @@ function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promise<Uin
     email?: string;
 } {
     return {
-        bio: record_opt_to_undefined(from_candid_opt_n36(_uploadFile, _downloadFile, value.bio)),
+        bio: record_opt_to_undefined(from_candid_opt_n19(_uploadFile, _downloadFile, value.bio)),
         name: value.name,
-        email: record_opt_to_undefined(from_candid_opt_n36(_uploadFile, _downloadFile, value.email))
+        email: record_opt_to_undefined(from_candid_opt_n19(_uploadFile, _downloadFile, value.email))
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -990,7 +1143,7 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     pop: null;
 } | {
     other: string;
@@ -1049,7 +1202,7 @@ function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Ui
         classical: value.classical
     } : value;
 }
-function from_candid_variant_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     audio: null;
 } | {
     combined: null;
@@ -1058,7 +1211,7 @@ function from_candid_variant_n24(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): FileType {
     return "audio" in value ? FileType.audio : "combined" in value ? FileType.combined : "image" in value ? FileType.image : value;
 }
-function from_candid_variant_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     tusd: null;
 } | {
     usdc: null;
@@ -1071,7 +1224,7 @@ function from_candid_variant_n31(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): StableCoin {
     return "tusd" in value ? StableCoin.tusd : "usdc" in value ? StableCoin.usdc : "usde" in value ? StableCoin.usde : "usdp" in value ? StableCoin.usdp : "rlusd" in value ? StableCoin.rlusd : value;
 }
-function from_candid_variant_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -1080,7 +1233,7 @@ function from_candid_variant_n38(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_variant_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: bigint;
 } | {
     invalidInput: string;
@@ -1107,41 +1260,41 @@ function from_candid_variant_n48(_uploadFile: (file: ExternalBlob) => Promise<Ui
         unauthorized: value.unauthorized
     } : value;
 }
-async function from_candid_vec_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_AudioFile>): Promise<Array<AudioFile>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_AudioFile_n11(_uploadFile, _downloadFile, x)));
+async function from_candid_vec_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_AudioFile>): Promise<Array<AudioFile>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_AudioFile_n12(_uploadFile, _downloadFile, x)));
 }
-async function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecord>): Promise<Array<NFTRecord>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_NFTRecord_n19(_uploadFile, _downloadFile, x)));
+async function from_candid_vec_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecord>): Promise<Array<NFTRecord>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_NFTRecord_n21(_uploadFile, _downloadFile, x)));
 }
-async function from_candid_vec_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecordWithParams>): Promise<Array<NFTRecordWithParams>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_NFTRecordWithParams_n26(_uploadFile, _downloadFile, x)));
+async function from_candid_vec_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecordWithParams>): Promise<Array<NFTRecordWithParams>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_NFTRecordWithParams_n28(_uploadFile, _downloadFile, x)));
 }
-async function to_candid_AudioFile_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AudioFile): Promise<_AudioFile> {
-    return await to_candid_record_n58(_uploadFile, _downloadFile, value);
+async function to_candid_AudioFile_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AudioFile): Promise<_AudioFile> {
+    return await to_candid_record_n59(_uploadFile, _downloadFile, value);
 }
-async function to_candid_ExternalBlob_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
+async function to_candid_ExternalBlob_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
     return await _uploadFile(value);
 }
-function to_candid_FileType_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: FileType): _FileType {
-    return to_candid_variant_n46(_uploadFile, _downloadFile, value);
+function to_candid_FileType_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: FileType): _FileType {
+    return to_candid_variant_n47(_uploadFile, _downloadFile, value);
 }
-function to_candid_Genre_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Genre): _Genre {
-    return to_candid_variant_n60(_uploadFile, _downloadFile, value);
+function to_candid_Genre_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Genre): _Genre {
+    return to_candid_variant_n61(_uploadFile, _downloadFile, value);
 }
-async function to_candid_MintNFTRequest_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MintNFTRequest): Promise<_MintNFTRequest> {
-    return await to_candid_record_n43(_uploadFile, _downloadFile, value);
+async function to_candid_MintNFTRequest_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MintNFTRequest): Promise<_MintNFTRequest> {
+    return await to_candid_record_n44(_uploadFile, _downloadFile, value);
 }
-async function to_candid_MintNFTWithParamsRequest_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MintNFTWithParamsRequest): Promise<_MintNFTWithParamsRequest> {
-    return await to_candid_record_n50(_uploadFile, _downloadFile, value);
+async function to_candid_MintNFTWithParamsRequest_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MintNFTWithParamsRequest): Promise<_MintNFTWithParamsRequest> {
+    return await to_candid_record_n51(_uploadFile, _downloadFile, value);
 }
-function to_candid_NFTParameters_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: NFTParameters): _NFTParameters {
-    return to_candid_record_n52(_uploadFile, _downloadFile, value);
+function to_candid_NFTParameters_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: NFTParameters): _NFTParameters {
+    return to_candid_record_n53(_uploadFile, _downloadFile, value);
 }
-function to_candid_StableCoin_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StableCoin): _StableCoin {
-    return to_candid_variant_n54(_uploadFile, _downloadFile, value);
+function to_candid_StableCoin_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StableCoin): _StableCoin {
+    return to_candid_variant_n55(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserProfile_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
-    return to_candid_record_n56(_uploadFile, _downloadFile, value);
+function to_candid_UserProfile_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
+    return to_candid_record_n57(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n9(_uploadFile, _downloadFile, value);
@@ -1152,6 +1305,9 @@ function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: Exte
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
     return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
+function to_candid_opt_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {
+    return value === null ? candid_none() : candid_some(value);
+}
 function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     proposed_top_up_amount?: bigint;
 }): {
@@ -1161,7 +1317,7 @@ function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
         proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
     };
 }
-async function to_candid_record_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function to_candid_record_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     title: string;
     imageBlob?: ExternalBlob;
     description: string;
@@ -1180,15 +1336,15 @@ async function to_candid_record_n43(_uploadFile: (file: ExternalBlob) => Promise
 }> {
     return {
         title: value.title,
-        imageBlob: value.imageBlob ? candid_some(await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.imageBlob)) : candid_none(),
+        imageBlob: value.imageBlob ? candid_some(await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.imageBlob)) : candid_none(),
         description: value.description,
-        audioBlob: value.audioBlob ? candid_some(await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.audioBlob)) : candid_none(),
-        fileType: to_candid_FileType_n45(_uploadFile, _downloadFile, value.fileType),
+        audioBlob: value.audioBlob ? candid_some(await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.audioBlob)) : candid_none(),
+        fileType: to_candid_FileType_n46(_uploadFile, _downloadFile, value.fileType),
         originalContentId: value.originalContentId ? candid_some(value.originalContentId) : candid_none(),
         artist: value.artist
     };
 }
-async function to_candid_record_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function to_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     title: string;
     imageBlob?: ExternalBlob;
     description: string;
@@ -1209,16 +1365,16 @@ async function to_candid_record_n50(_uploadFile: (file: ExternalBlob) => Promise
 }> {
     return {
         title: value.title,
-        imageBlob: value.imageBlob ? candid_some(await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.imageBlob)) : candid_none(),
+        imageBlob: value.imageBlob ? candid_some(await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.imageBlob)) : candid_none(),
         description: value.description,
-        audioBlob: value.audioBlob ? candid_some(await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.audioBlob)) : candid_none(),
-        fileType: to_candid_FileType_n45(_uploadFile, _downloadFile, value.fileType),
+        audioBlob: value.audioBlob ? candid_some(await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.audioBlob)) : candid_none(),
+        fileType: to_candid_FileType_n46(_uploadFile, _downloadFile, value.fileType),
         originalContentId: value.originalContentId ? candid_some(value.originalContentId) : candid_none(),
         artist: value.artist,
-        params: to_candid_NFTParameters_n51(_uploadFile, _downloadFile, value.params)
+        params: to_candid_NFTParameters_n52(_uploadFile, _downloadFile, value.params)
     };
 }
-function to_candid_record_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     stableCoin: StableCoin;
     revenueSplits: Array<RevenueSplit>;
     price: bigint;
@@ -1230,13 +1386,13 @@ function to_candid_record_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8
     royaltyPercentage: bigint;
 } {
     return {
-        stableCoin: to_candid_StableCoin_n53(_uploadFile, _downloadFile, value.stableCoin),
+        stableCoin: to_candid_StableCoin_n54(_uploadFile, _downloadFile, value.stableCoin),
         revenueSplits: value.revenueSplits,
         price: value.price,
         royaltyPercentage: value.royaltyPercentage
     };
 }
-function to_candid_record_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     bio?: string;
     name: string;
     email?: string;
@@ -1251,7 +1407,7 @@ function to_candid_record_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         email: value.email ? candid_some(value.email) : candid_none()
     };
 }
-async function to_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function to_candid_record_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     title: string;
     creator: string;
@@ -1262,6 +1418,7 @@ async function to_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise
     uploadTimestamp: bigint;
     coverImage?: ExternalBlob;
     genre: Genre;
+    albumId?: string;
     isPublic: boolean;
 }): Promise<{
     id: string;
@@ -1274,6 +1431,7 @@ async function to_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise
     uploadTimestamp: bigint;
     coverImage: [] | [_ExternalBlob];
     genre: _Genre;
+    albumId: [] | [string];
     isPublic: boolean;
 }> {
     return {
@@ -1282,15 +1440,16 @@ async function to_candid_record_n58(_uploadFile: (file: ExternalBlob) => Promise
         creator: value.creator,
         duration: value.duration,
         owner: value.owner ? candid_some(value.owner) : candid_none(),
-        blob: await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.blob),
+        blob: await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.blob),
         size: value.size,
         uploadTimestamp: value.uploadTimestamp,
-        coverImage: value.coverImage ? candid_some(await to_candid_ExternalBlob_n44(_uploadFile, _downloadFile, value.coverImage)) : candid_none(),
-        genre: to_candid_Genre_n59(_uploadFile, _downloadFile, value.genre),
+        coverImage: value.coverImage ? candid_some(await to_candid_ExternalBlob_n45(_uploadFile, _downloadFile, value.coverImage)) : candid_none(),
+        genre: to_candid_Genre_n60(_uploadFile, _downloadFile, value.genre),
+        albumId: value.albumId ? candid_some(value.albumId) : candid_none(),
         isPublic: value.isPublic
     };
 }
-function to_candid_variant_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: FileType): {
+function to_candid_variant_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: FileType): {
     audio: null;
 } | {
     combined: null;
@@ -1305,7 +1464,7 @@ function to_candid_variant_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint
         image: null
     } : value;
 }
-function to_candid_variant_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StableCoin): {
+function to_candid_variant_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: StableCoin): {
     tusd: null;
 } | {
     usdc: null;
@@ -1328,7 +1487,7 @@ function to_candid_variant_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint
         rlusd: null
     } : value;
 }
-function to_candid_variant_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_variant_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     __kind__: "pop";
     pop: null;
 } | {

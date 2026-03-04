@@ -1,9 +1,22 @@
-import { useState } from 'react';
-import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
+import { useState } from "react";
 
 interface GlobalFallbackUIProps {
   error: Error;
@@ -11,7 +24,11 @@ interface GlobalFallbackUIProps {
   onRetry?: () => void;
 }
 
-export function GlobalFallbackUI({ error, context, onRetry }: GlobalFallbackUIProps) {
+export function GlobalFallbackUI({
+  error,
+  context,
+  onRetry,
+}: GlobalFallbackUIProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -20,7 +37,7 @@ export function GlobalFallbackUI({ error, context, onRetry }: GlobalFallbackUIPr
 Context: ${context}
 Error: ${error.name}
 Message: ${error.message}
-Stack: ${error.stack || 'No stack trace available'}
+Stack: ${error.stack || "No stack trace available"}
 Timestamp: ${new Date().toISOString()}
 User Agent: ${navigator.userAgent}
 URL: ${window.location.href}
@@ -31,12 +48,12 @@ URL: ${window.location.href}
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy error report:', err);
+      console.error("Failed to copy error report:", err);
     }
   };
 
   const handleRetry = () => {
-    console.log('🔄 GlobalFallbackUI: User initiated retry');
+    console.log("🔄 GlobalFallbackUI: User initiated retry");
     if (onRetry) {
       onRetry();
     } else {
@@ -56,12 +73,10 @@ URL: ${window.location.href}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <CardTitle className="text-xl">Application Error</CardTitle>
                 <Badge variant="destructive" className="text-xs">
-                  {error.name || 'Error'}
+                  {error.name || "Error"}
                 </Badge>
               </div>
-              <CardDescription className="text-base">
-                {context}
-              </CardDescription>
+              <CardDescription className="text-base">{context}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -72,15 +87,16 @@ URL: ${window.location.href}
               Error Message:
             </p>
             <p className="text-sm font-mono text-foreground break-words">
-              {error.message || 'An unknown error occurred'}
+              {error.message || "An unknown error occurred"}
             </p>
           </div>
 
           {/* User-friendly explanation */}
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              The application encountered an unexpected error and cannot continue normally. 
-              This error has been logged with detailed diagnostic information.
+              The application encountered an unexpected error and cannot
+              continue normally. This error has been logged with detailed
+              diagnostic information.
             </p>
             <p className="text-sm font-medium text-foreground">
               What you can do:
@@ -90,18 +106,23 @@ URL: ${window.location.href}
               <li>Clear your browser cache and cookies</li>
               <li>Try using a different browser</li>
               <li>Check your internet connection</li>
-              <li>Copy the error details and contact support if the issue persists</li>
+              <li>
+                Copy the error details and contact support if the issue persists
+              </li>
             </ul>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={handleRetry} className="flex-1 gap-2 min-w-[140px]">
+            <Button
+              onClick={handleRetry}
+              className="flex-1 gap-2 min-w-[140px]"
+            >
               <RefreshCw className="h-4 w-4" />
               Refresh Page
             </Button>
-            <Button 
-              onClick={handleCopyError} 
+            <Button
+              onClick={handleCopyError}
               variant="outline"
               className="gap-2"
             >
@@ -117,8 +138,8 @@ URL: ${window.location.href}
                 </>
               )}
             </Button>
-            <Button 
-              onClick={() => setShowDetails(!showDetails)} 
+            <Button
+              onClick={() => setShowDetails(!showDetails)}
               variant="outline"
               className="gap-2"
             >
@@ -140,7 +161,7 @@ URL: ${window.location.href}
           {showDetails && (
             <div className="space-y-3 pt-4 border-t">
               <Separator />
-              
+
               {/* Error Stack */}
               {error.stack && (
                 <div>
@@ -159,13 +180,33 @@ URL: ${window.location.href}
                   Diagnostic Information:
                 </p>
                 <div className="rounded-lg bg-muted p-3 text-xs space-y-1 border">
-                  <p><span className="font-medium">Context:</span> {context}</p>
-                  <p><span className="font-medium">Error Type:</span> {error.name}</p>
-                  <p><span className="font-medium">Timestamp:</span> {new Date().toISOString()}</p>
-                  <p><span className="font-medium">URL:</span> {window.location.href}</p>
-                  <p><span className="font-medium">User Agent:</span> {navigator.userAgent}</p>
-                  <p><span className="font-medium">Environment:</span> {process.env.NODE_ENV}</p>
-                  <p><span className="font-medium">Online Status:</span> {navigator.onLine ? 'Online' : 'Offline'}</p>
+                  <p>
+                    <span className="font-medium">Context:</span> {context}
+                  </p>
+                  <p>
+                    <span className="font-medium">Error Type:</span>{" "}
+                    {error.name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Timestamp:</span>{" "}
+                    {new Date().toISOString()}
+                  </p>
+                  <p>
+                    <span className="font-medium">URL:</span>{" "}
+                    {window.location.href}
+                  </p>
+                  <p>
+                    <span className="font-medium">User Agent:</span>{" "}
+                    {navigator.userAgent}
+                  </p>
+                  <p>
+                    <span className="font-medium">Environment:</span>{" "}
+                    {process.env.NODE_ENV}
+                  </p>
+                  <p>
+                    <span className="font-medium">Online Status:</span>{" "}
+                    {navigator.onLine ? "Online" : "Offline"}
+                  </p>
                 </div>
               </div>
 
@@ -175,10 +216,30 @@ URL: ${window.location.href}
                   Browser Capabilities:
                 </p>
                 <div className="rounded-lg bg-muted p-3 text-xs space-y-1 border">
-                  <p><span className="font-medium">localStorage:</span> {typeof localStorage !== 'undefined' ? '✓ Available' : '✗ Not available'}</p>
-                  <p><span className="font-medium">sessionStorage:</span> {typeof sessionStorage !== 'undefined' ? '✓ Available' : '✗ Not available'}</p>
-                  <p><span className="font-medium">fetch API:</span> {typeof fetch !== 'undefined' ? '✓ Available' : '✗ Not available'}</p>
-                  <p><span className="font-medium">WebAssembly:</span> {typeof WebAssembly !== 'undefined' ? '✓ Available' : '✗ Not available'}</p>
+                  <p>
+                    <span className="font-medium">localStorage:</span>{" "}
+                    {typeof localStorage !== "undefined"
+                      ? "✓ Available"
+                      : "✗ Not available"}
+                  </p>
+                  <p>
+                    <span className="font-medium">sessionStorage:</span>{" "}
+                    {typeof sessionStorage !== "undefined"
+                      ? "✓ Available"
+                      : "✗ Not available"}
+                  </p>
+                  <p>
+                    <span className="font-medium">fetch API:</span>{" "}
+                    {typeof fetch !== "undefined"
+                      ? "✓ Available"
+                      : "✗ Not available"}
+                  </p>
+                  <p>
+                    <span className="font-medium">WebAssembly:</span>{" "}
+                    {typeof WebAssembly !== "undefined"
+                      ? "✓ Available"
+                      : "✗ Not available"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -187,8 +248,9 @@ URL: ${window.location.href}
           {/* Help Text */}
           <div className="pt-4 border-t">
             <p className="text-xs text-muted-foreground">
-              This is a non-blocking error screen. The application will attempt to recover when you refresh. 
-              If you continue to experience issues, please report this error with the diagnostic information above.
+              This is a non-blocking error screen. The application will attempt
+              to recover when you refresh. If you continue to experience issues,
+              please report this error with the diagnostic information above.
             </p>
           </div>
         </CardContent>

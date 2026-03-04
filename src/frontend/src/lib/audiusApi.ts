@@ -1,21 +1,21 @@
 /**
  * Audius API Integration Module
- * 
+ *
  * This module provides functions to interact with the Audius public API
  * for searching and streaming music tracks.
  */
 
-const AUDIUS_API_HOST = 'https://discoveryprovider.audius.co';
-const APP_NAME = 'AudioStreamingPlatform';
+const AUDIUS_API_HOST = "https://discoveryprovider.audius.co";
+const APP_NAME = "AudioStreamingPlatform";
 
 export interface AudiusTrack {
   id: string;
   title: string;
   duration: number;
   artwork?: {
-    '150x150'?: string;
-    '480x480'?: string;
-    '1000x1000'?: string;
+    "150x150"?: string;
+    "480x480"?: string;
+    "1000x1000"?: string;
   };
   user: {
     name: string;
@@ -41,7 +41,7 @@ export interface AudiusSearchResponse {
  */
 export async function searchAudiusTracks(
   query: string,
-  limit: number = 10
+  limit = 10,
 ): Promise<AudiusTrack[]> {
   if (!query.trim()) {
     return [];
@@ -49,14 +49,14 @@ export async function searchAudiusTracks(
 
   try {
     const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/search`);
-    url.searchParams.append('query', query);
-    url.searchParams.append('app_name', APP_NAME);
-    url.searchParams.append('limit', limit.toString());
+    url.searchParams.append("query", query);
+    url.searchParams.append("app_name", APP_NAME);
+    url.searchParams.append("limit", limit.toString());
 
     const response = await fetch(url.toString(), {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
     });
 
@@ -67,7 +67,7 @@ export async function searchAudiusTracks(
     const data: AudiusSearchResponse = await response.json();
     return data.data || [];
   } catch (error) {
-    console.error('Error searching Audius tracks:', error);
+    console.error("Error searching Audius tracks:", error);
     throw error;
   }
 }
@@ -87,17 +87,17 @@ export function getAudiusStreamUrl(trackId: string): string {
  * @returns Promise with array of trending tracks
  */
 export async function getTrendingAudiusTracks(
-  limit: number = 10
+  limit = 10,
 ): Promise<AudiusTrack[]> {
   try {
     const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/trending`);
-    url.searchParams.append('app_name', APP_NAME);
-    url.searchParams.append('limit', limit.toString());
+    url.searchParams.append("app_name", APP_NAME);
+    url.searchParams.append("limit", limit.toString());
 
     const response = await fetch(url.toString(), {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
     });
 
@@ -108,7 +108,7 @@ export async function getTrendingAudiusTracks(
     const data: AudiusSearchResponse = await response.json();
     return data.data || [];
   } catch (error) {
-    console.error('Error fetching trending Audius tracks:', error);
+    console.error("Error fetching trending Audius tracks:", error);
     throw error;
   }
 }
@@ -119,16 +119,16 @@ export async function getTrendingAudiusTracks(
  * @returns Promise with track metadata
  */
 export async function getAudiusTrackMetadata(
-  trackId: string
+  trackId: string,
 ): Promise<AudiusTrack> {
   try {
     const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/${trackId}`);
-    url.searchParams.append('app_name', APP_NAME);
+    url.searchParams.append("app_name", APP_NAME);
 
     const response = await fetch(url.toString(), {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
     });
 
@@ -139,7 +139,7 @@ export async function getAudiusTrackMetadata(
     const data: { data: AudiusTrack } = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Error fetching Audius track metadata:', error);
+    console.error("Error fetching Audius track metadata:", error);
     throw error;
   }
 }

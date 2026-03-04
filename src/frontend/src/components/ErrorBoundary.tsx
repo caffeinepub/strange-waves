@@ -1,8 +1,15 @@
-import React, { Component, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertTriangle, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import type React from "react";
+import { Component, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -19,7 +26,7 @@ interface State {
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { 
+    this.state = {
       hasError: false,
       showDetails: false,
     };
@@ -27,24 +34,24 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
-    console.error('🚨 ErrorBoundary: Caught error in getDerivedStateFromError');
+    console.error("🚨 ErrorBoundary: Caught error in getDerivedStateFromError");
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Enhanced error logging with context
-    console.error('🚨 ErrorBoundary: Component error caught');
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.error('Error:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.error('Component stack:', errorInfo.componentStack);
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.error('Timestamp:', new Date().toISOString());
-    console.error('User agent:', navigator.userAgent);
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error("🚨 ErrorBoundary: Component error caught");
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Error:", error);
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Component stack:", errorInfo.componentStack);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Timestamp:", new Date().toISOString());
+    console.error("User agent:", navigator.userAgent);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     this.setState({
       error,
@@ -52,20 +59,23 @@ export class ErrorBoundary extends Component<Props, State> {
     });
 
     // Log to external error tracking service if available
-    if (typeof window !== 'undefined' && (window as any).errorTracker) {
+    if (typeof window !== "undefined" && (window as any).errorTracker) {
       try {
         (window as any).errorTracker.logError(error, errorInfo);
       } catch (trackingError) {
-        console.error('Failed to log error to tracking service:', trackingError);
+        console.error(
+          "Failed to log error to tracking service:",
+          trackingError,
+        );
       }
     }
   }
 
   handleReset = () => {
-    console.log('🔄 ErrorBoundary: Resetting error state and reloading page');
-    this.setState({ 
-      hasError: false, 
-      error: undefined, 
+    console.log("🔄 ErrorBoundary: Resetting error state and reloading page");
+    this.setState({
+      hasError: false,
+      error: undefined,
       errorInfo: undefined,
       showDetails: false,
     });
@@ -73,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   toggleDetails = () => {
-    this.setState(prev => ({ showDetails: !prev.showDetails }));
+    this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   render() {
@@ -84,7 +94,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       const { error, errorInfo, showDetails } = this.state;
-      const isDevelopment = process.env.NODE_ENV === 'development';
+      const isDevelopment = process.env.NODE_ENV === "development";
 
       // Enhanced fallback UI with detailed error context
       return (
@@ -99,11 +109,12 @@ export class ErrorBoundary extends Component<Props, State> {
                   <div className="flex items-center gap-2 mb-2">
                     <CardTitle>Application Error</CardTitle>
                     <Badge variant="destructive" className="text-xs">
-                      {error?.name || 'Error'}
+                      {error?.name || "Error"}
                     </Badge>
                   </div>
                   <CardDescription>
-                    The application encountered an unexpected error and cannot continue
+                    The application encountered an unexpected error and cannot
+                    continue
                   </CardDescription>
                 </div>
               </div>
@@ -116,7 +127,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     Error Message:
                   </p>
                   <p className="text-sm font-mono text-foreground break-words">
-                    {error.message || 'An unknown error occurred'}
+                    {error.message || "An unknown error occurred"}
                   </p>
                 </div>
               )}
@@ -124,12 +135,14 @@ export class ErrorBoundary extends Component<Props, State> {
               {/* Error Context */}
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  This error has been logged with detailed context information. 
-                  You can try refreshing the page to continue using the application.
+                  This error has been logged with detailed context information.
+                  You can try refreshing the page to continue using the
+                  application.
                 </p>
                 {isDevelopment && (
                   <p className="text-xs text-muted-foreground italic">
-                    Development mode: Check the browser console for detailed error information.
+                    Development mode: Check the browser console for detailed
+                    error information.
                   </p>
                 )}
               </div>
@@ -141,8 +154,8 @@ export class ErrorBoundary extends Component<Props, State> {
                   Refresh Page
                 </Button>
                 {(isDevelopment || errorInfo) && (
-                  <Button 
-                    onClick={this.toggleDetails} 
+                  <Button
+                    onClick={this.toggleDetails}
                     variant="outline"
                     className="gap-2"
                   >
@@ -194,10 +207,22 @@ export class ErrorBoundary extends Component<Props, State> {
                       Additional Context:
                     </p>
                     <div className="rounded-lg bg-muted p-3 text-xs space-y-1">
-                      <p><span className="font-medium">Timestamp:</span> {new Date().toISOString()}</p>
-                      <p><span className="font-medium">User Agent:</span> {navigator.userAgent}</p>
-                      <p><span className="font-medium">URL:</span> {window.location.href}</p>
-                      <p><span className="font-medium">Environment:</span> {process.env.NODE_ENV}</p>
+                      <p>
+                        <span className="font-medium">Timestamp:</span>{" "}
+                        {new Date().toISOString()}
+                      </p>
+                      <p>
+                        <span className="font-medium">User Agent:</span>{" "}
+                        {navigator.userAgent}
+                      </p>
+                      <p>
+                        <span className="font-medium">URL:</span>{" "}
+                        {window.location.href}
+                      </p>
+                      <p>
+                        <span className="font-medium">Environment:</span>{" "}
+                        {process.env.NODE_ENV}
+                      </p>
                     </div>
                   </div>
                 </div>

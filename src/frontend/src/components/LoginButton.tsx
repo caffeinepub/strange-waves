@@ -1,38 +1,38 @@
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, LogIn, LogOut } from "lucide-react";
+import { toast } from "sonner";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export function LoginButton() {
   const { login, clear, loginStatus, identity } = useInternetIdentity();
   const queryClient = useQueryClient();
 
   const isAuthenticated = !!identity;
-  const isLoggingIn = loginStatus === 'logging-in';
-  const isInitializing = loginStatus === 'initializing';
+  const isLoggingIn = loginStatus === "logging-in";
+  const isInitializing = loginStatus === "initializing";
 
   const handleAuth = async () => {
     if (isAuthenticated) {
       try {
         await clear();
         queryClient.clear();
-        toast.success('Logged out successfully');
+        toast.success("Logged out successfully");
       } catch (error: any) {
-        console.error('Logout error:', error);
-        toast.error(error.message || 'Failed to logout');
+        console.error("Logout error:", error);
+        toast.error(error.message || "Failed to logout");
       }
     } else {
       try {
         await login();
-        toast.success('Logged in successfully');
+        toast.success("Logged in successfully");
       } catch (error: any) {
-        console.error('Login error:', error);
-        if (error.message === 'User is already authenticated') {
+        console.error("Login error:", error);
+        if (error.message === "User is already authenticated") {
           await clear();
           setTimeout(() => login(), 300);
         } else {
-          toast.error(error.message || 'Failed to login');
+          toast.error(error.message || "Failed to login");
         }
       }
     }
@@ -56,7 +56,7 @@ export function LoginButton() {
     <Button
       onClick={handleAuth}
       disabled={isLoggingIn}
-      variant={isAuthenticated ? 'outline' : 'default'}
+      variant={isAuthenticated ? "outline" : "default"}
       size="sm"
       className="gap-2"
     >

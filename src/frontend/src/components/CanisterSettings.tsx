@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,26 +6,29 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface CanisterSettingsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) {
-  const [canisterId, setCanisterId] = useState('');
-  const [savedCanisterId, setSavedCanisterId] = useState('');
+export function CanisterSettings({
+  open,
+  onOpenChange,
+}: CanisterSettingsProps) {
+  const [canisterId, setCanisterId] = useState("");
+  const [savedCanisterId, setSavedCanisterId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load saved canister ID from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('liveCanisterId');
+    const saved = localStorage.getItem("liveCanisterId");
     if (saved) {
       setSavedCanisterId(saved);
       setCanisterId(saved);
@@ -39,28 +42,28 @@ export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) 
     }
 
     setIsSaving(true);
-    
+
     // Simulate validation/connection check
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     try {
-      localStorage.setItem('liveCanisterId', canisterId.trim());
+      localStorage.setItem("liveCanisterId", canisterId.trim());
       setSavedCanisterId(canisterId.trim());
       setIsConnected(true);
-      console.log('Live canister ID saved:', canisterId.trim());
+      console.log("Live canister ID saved:", canisterId.trim());
     } catch (error) {
-      console.error('Failed to save canister ID:', error);
+      console.error("Failed to save canister ID:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleClear = () => {
-    localStorage.removeItem('liveCanisterId');
-    setCanisterId('');
-    setSavedCanisterId('');
+    localStorage.removeItem("liveCanisterId");
+    setCanisterId("");
+    setSavedCanisterId("");
     setIsConnected(false);
-    console.log('Live canister ID cleared');
+    console.log("Live canister ID cleared");
   };
 
   const handleClose = () => {
@@ -90,7 +93,9 @@ export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) 
             ) : (
               <>
                 <XCircle className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Not Connected</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Not Connected
+                </span>
               </>
             )}
           </div>
@@ -113,7 +118,9 @@ export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) 
           {/* Current Saved ID Display */}
           {savedCanisterId && (
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Current Saved ID</Label>
+              <Label className="text-xs text-muted-foreground">
+                Current Saved ID
+              </Label>
               <div className="rounded-md bg-muted p-2">
                 <code className="text-xs break-all">{savedCanisterId}</code>
               </div>
@@ -131,7 +138,9 @@ export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) 
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!canisterId.trim() || canisterId === savedCanisterId || isSaving}
+            disabled={
+              !canisterId.trim() || canisterId === savedCanisterId || isSaving
+            }
           >
             {isSaving ? (
               <>
@@ -139,7 +148,7 @@ export function CanisterSettings({ open, onOpenChange }: CanisterSettingsProps) 
                 Saving...
               </>
             ) : (
-              'Save'
+              "Save"
             )}
           </Button>
         </DialogFooter>

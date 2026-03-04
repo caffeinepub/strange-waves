@@ -22,6 +22,17 @@ export interface PlaylistView {
     trackIds: Array<string>;
     audiusTracks: Array<AudiusTrack>;
 }
+export interface AlbumView {
+    id: string;
+    theme: string;
+    listenerTier: AlbumTier;
+    creationTimestamp: bigint;
+    name: string;
+    description: string;
+    collectorTier: AlbumTier;
+    trackIds: Array<string>;
+    investorTier: AlbumTier;
+}
 export interface NFTRecordWithParams {
     imageBlob?: ExternalBlob;
     metadata: NFTMetadata;
@@ -61,6 +72,7 @@ export interface AudioFile {
     uploadTimestamp: bigint;
     coverImage?: ExternalBlob;
     genre: Genre;
+    albumId?: string;
     isPublic: boolean;
 }
 export interface NFTRecord {
@@ -94,6 +106,12 @@ export interface AudiusTrack {
     streamUrl: string;
     artist: string;
 }
+export interface AlbumTier {
+    name: string;
+    description: string;
+    supply: bigint;
+    price: bigint;
+}
 export interface MintNFTWithParamsRequest {
     title: string;
     imageBlob?: ExternalBlob;
@@ -112,6 +130,15 @@ export interface NFTMetadata {
     originalContentId: string;
     mintTimestamp: bigint;
     artist: string;
+}
+export interface AlbumInput {
+    id: string;
+    theme: string;
+    listenerTier: AlbumTier;
+    name: string;
+    description: string;
+    collectorTier: AlbumTier;
+    investorTier: AlbumTier;
 }
 export interface RevenueSplit {
     address: Principal;
@@ -147,16 +174,21 @@ export enum UserRole {
 }
 export interface backendInterface {
     addAudiusTrackToPlaylist(playlistId: string, track: AudiusTrack): Promise<void>;
+    addTrackToAlbum(albumId: string, trackId: string): Promise<void>;
     addTrackToPlaylist(playlistId: string, trackId: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createAlbum(input: AlbumInput): Promise<AlbumView>;
     createPlaylist(id: string, title: string): Promise<PlaylistView>;
+    deleteAlbum(id: string): Promise<void>;
     deleteAudioFile(id: string): Promise<void>;
     deletePlaylist(id: string): Promise<void>;
+    getAlbum(id: string): Promise<AlbumView | null>;
     getAllAudioFiles(): Promise<Array<AudioFile>>;
     getAllNFTRecords(): Promise<Array<NFTRecord>>;
     getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
     getAllPlaylists(): Promise<Array<PlaylistView>>;
     getAudioFile(id: string): Promise<AudioFile | null>;
+    getAudioFilesByAlbum(albumId: string): Promise<Array<AudioFile>>;
     getCallerAudioFiles(): Promise<Array<AudioFile>>;
     getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
     getCallerPlaylists(): Promise<Array<PlaylistView>>;
@@ -168,11 +200,14 @@ export interface backendInterface {
     getPlaylist(id: string): Promise<PlaylistView | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listAlbums(): Promise<Array<AlbumView>>;
     mintNFT(request: MintNFTRequest): Promise<MintNFTResponse>;
     mintNFTwithParams(request: MintNFTWithParamsRequest): Promise<MintNFTResponse>;
     removeAudiusTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
     removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    updateAlbum(id: string, input: AlbumInput): Promise<AlbumView>;
     updatePlaylistTitle(id: string, newTitle: string): Promise<void>;
     uploadAudioFile(file: AudioFile): Promise<string>;
+    uploadTrackWithAlbum(file: AudioFile, albumId: string | null): Promise<string>;
 }

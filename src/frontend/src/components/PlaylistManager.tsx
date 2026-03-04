@@ -1,20 +1,4 @@
-import { useState } from 'react';
-import { ListMusic, Plus, Music, Trash2, Clock, Upload, Code, Copy, AlertCircle, Loader2, X, ChevronDown, ChevronUp, MoreVertical, Edit, Radio } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,75 +9,117 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Code,
+  Copy,
+  Edit,
+  ListMusic,
+  Loader2,
+  MoreVertical,
+  Music,
+  Plus,
+  Radio,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { AudioFile, PlaylistView } from "../backend";
+import { useActorReady } from "../hooks/useActorReady";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import {
+  type CombinedAudio,
+  useActionQueueProcessor,
+  useAddAudiusTrackToPlaylist,
+  useAddTrackToPlaylist,
+  useAudioFiles,
   useCallerPlaylists,
   useCreatePlaylist,
-  useAddTrackToPlaylist,
-  useAddAudiusTrackToPlaylist,
-  useRemoveTrackFromPlaylist,
-  useRemoveAudiusTrackFromPlaylist,
   useDeletePlaylist,
+  useRemoveAudiusTrackFromPlaylist,
+  useRemoveTrackFromPlaylist,
   useRenamePlaylist,
-  useAudioFiles,
   useSearchAudiusTracks,
-  useActionQueueProcessor,
-  type CombinedAudio,
-} from '../hooks/useQueries';
-import { useActorReady } from '../hooks/useActorReady';
-import type { PlaylistView, AudioFile } from '../backend';
-import { toast } from 'sonner';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+} from "../hooks/useQueries";
 
 interface PlaylistManagerProps {
   onSelectAudio: (audio: CombinedAudio) => void;
   onClose?: () => void;
 }
 
-export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps) {
-  const [newPlaylistName, setNewPlaylistName] = useState('');
+export function PlaylistManager({
+  onSelectAudio,
+  onClose,
+}: PlaylistManagerProps) {
+  const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistView | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistView | null>(
+    null,
+  );
   const [isAddTrackDialogOpen, setIsAddTrackDialogOpen] = useState(false);
-  const [selectedTrackId, setSelectedTrackId] = useState<string>('');
-  const [audiusSearchQuery, setAudiusSearchQuery] = useState('');
-  const [addTrackTab, setAddTrackTab] = useState<'local' | 'audius'>('local');
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
+  const [audiusSearchQuery, setAudiusSearchQuery] = useState("");
+  const [addTrackTab, setAddTrackTab] = useState<"local" | "audius">("local");
   const [embedCodeDialogOpen, setEmbedCodeDialogOpen] = useState(false);
-  const [embedCode, setEmbedCode] = useState('');
-  const [expandedPlaylists, setExpandedPlaylists] = useState<Set<string>>(new Set());
+  const [embedCode, setEmbedCode] = useState("");
+  const [expandedPlaylists, setExpandedPlaylists] = useState<Set<string>>(
+    new Set(),
+  );
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
-  const [renamePlaylistId, setRenamePlaylistId] = useState<string>('');
-  const [renameValue, setRenameValue] = useState('');
+  const [renamePlaylistId, setRenamePlaylistId] = useState<string>("");
+  const [renameValue, setRenameValue] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletePlaylistId, setDeletePlaylistId] = useState<string>('');
+  const [deletePlaylistId, setDeletePlaylistId] = useState<string>("");
 
   const { isActorReady, isActorInitializing } = useActorReady();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-  
-  const { data: playlists = [], isLoading: isLoadingPlaylists } = useCallerPlaylists();
-  const { data: audioFiles = [], isLoading: isLoadingAudioFiles } = useAudioFiles();
-  const { data: audiusResults = [], isLoading: isLoadingAudius } = useSearchAudiusTracks(
-    audiusSearchQuery,
-    addTrackTab === 'audius' && audiusSearchQuery.length > 0
-  );
+
+  const { data: playlists = [], isLoading: isLoadingPlaylists } =
+    useCallerPlaylists();
+  const { data: audioFiles = [], isLoading: isLoadingAudioFiles } =
+    useAudioFiles();
+  // Only search when on the audius tab and there's a query; pass empty string otherwise
+  const audiusQuery = addTrackTab === "audius" ? audiusSearchQuery : "";
+  const { data: audiusResults = [], isLoading: isLoadingAudius } =
+    useSearchAudiusTracks(audiusQuery);
   const createPlaylistMutation = useCreatePlaylist();
   const addTrackMutation = useAddTrackToPlaylist();
   const addAudiusTrackMutation = useAddAudiusTrackToPlaylist();
@@ -106,7 +132,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
   useActionQueueProcessor();
 
   const togglePlaylistExpanded = (playlistId: string) => {
-    setExpandedPlaylists(prev => {
+    setExpandedPlaylists((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(playlistId)) {
         newSet.delete(playlistId);
@@ -128,13 +154,15 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     if (!newPlaylistName.trim()) return;
 
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
 
     const id = `playlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     await createPlaylistMutation.mutateAsync({ id, title: newPlaylistName });
-    setNewPlaylistName('');
+    setNewPlaylistName("");
     setIsCreateDialogOpen(false);
   };
 
@@ -142,7 +170,9 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     if (!selectedPlaylist || !selectedTrackId) return;
 
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
 
@@ -150,7 +180,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
       playlistId: selectedPlaylist.id,
       trackId: selectedTrackId,
     });
-    setSelectedTrackId('');
+    setSelectedTrackId("");
     setIsAddTrackDialogOpen(false);
   };
 
@@ -158,14 +188,19 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     if (!selectedPlaylist) return;
 
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
 
     // Convert Audius API track to backend AudiusTrack format
-    const artworkUrl = typeof audiusTrack.artwork === 'string' 
-      ? audiusTrack.artwork 
-      : audiusTrack.artwork?.['150x150'] || audiusTrack.artwork?.['480x480'] || '';
+    const artworkUrl =
+      typeof audiusTrack.artwork === "string"
+        ? audiusTrack.artwork
+        : audiusTrack.artwork?.["150x150"] ||
+          audiusTrack.artwork?.["480x480"] ||
+          "";
 
     const backendTrack = {
       id: audiusTrack.id,
@@ -180,20 +215,27 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
       track: backendTrack,
     });
     setIsAddTrackDialogOpen(false);
-    setAudiusSearchQuery('');
+    setAudiusSearchQuery("");
   };
 
   const handleRemoveTrack = async (playlistId: string, trackId: string) => {
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
     await removeTrackMutation.mutateAsync({ playlistId, trackId });
   };
 
-  const handleRemoveAudiusTrack = async (playlistId: string, trackId: string) => {
+  const handleRemoveAudiusTrack = async (
+    playlistId: string,
+    trackId: string,
+  ) => {
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
     await removeAudiusTrackMutation.mutateAsync({ playlistId, trackId });
@@ -201,18 +243,20 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
 
   const handleDeletePlaylist = async () => {
     if (!deletePlaylistId) return;
-    
+
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
     await deletePlaylistMutation.mutateAsync(deletePlaylistId);
     setDeleteDialogOpen(false);
-    setDeletePlaylistId('');
+    setDeletePlaylistId("");
   };
 
   const handleGenerateEmbedCode = (playlistId: string) => {
-    const canisterId = window.location.hostname.split('.')[0];
+    const canisterId = window.location.hostname.split(".")[0];
     const code = `<iframe src="https://${canisterId}.ic0.app/playlist/${playlistId}" width="100%" height="400" frameborder="0"></iframe>`;
     setEmbedCode(code);
     setEmbedCodeDialogOpen(true);
@@ -222,7 +266,9 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     if (!renamePlaylistId || !renameValue.trim()) return;
 
     if (!isActorReady) {
-      toast.error('System is initializing. Please wait a moment and try again.');
+      toast.error(
+        "System is initializing. Please wait a moment and try again.",
+      );
       return;
     }
 
@@ -231,8 +277,8 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
       newTitle: renameValue,
     });
     setRenameDialogOpen(false);
-    setRenamePlaylistId('');
-    setRenameValue('');
+    setRenamePlaylistId("");
+    setRenameValue("");
   };
 
   const openRenameDialog = (playlist: PlaylistView) => {
@@ -248,7 +294,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
 
   const copyEmbedCode = () => {
     navigator.clipboard.writeText(embedCode);
-    toast.success('Embed code copied to clipboard');
+    toast.success("Embed code copied to clipboard");
   };
 
   const getAudioFileById = (id: string): AudioFile | undefined => {
@@ -258,24 +304,31 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const formatDate = (timestamp: bigint) => {
     const date = new Date(Number(timestamp) / 1000000);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
-  const renderPlaylistTrack = (trackId: string, playlistId: string, canEdit: boolean) => {
+  const renderPlaylistTrack = (
+    trackId: string,
+    playlistId: string,
+    canEdit: boolean,
+  ) => {
     const audioFile = getAudioFileById(trackId);
-    
+
     if (!audioFile) {
       return (
-        <div key={trackId} className="flex items-center gap-4 p-4 text-muted-foreground">
+        <div
+          key={trackId}
+          className="flex items-center gap-4 p-4 text-muted-foreground"
+        >
           <Music className="h-12 w-12 opacity-50" />
           <div className="flex-1">
             <p className="text-sm">Track not found (ID: {trackId})</p>
@@ -284,7 +337,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
       );
     }
 
-    const combined: CombinedAudio = { source: 'local', data: audioFile };
+    const combined: CombinedAudio = { source: "local", data: audioFile };
 
     return (
       <div
@@ -292,13 +345,14 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
         className="group flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
       >
         <button
+          type="button"
           onClick={() => onSelectAudio(combined)}
           className="flex flex-1 items-center gap-4 text-left"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
             <Music className="h-6 w-6 text-primary-foreground" />
           </div>
-          
+
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold leading-none">{audioFile.title}</h3>
@@ -335,7 +389,8 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
                 <AlertDialogHeader>
                   <AlertDialogTitle>Remove Track</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to remove "{audioFile.title}" from this playlist?
+                    Are you sure you want to remove "{audioFile.title}" from
+                    this playlist?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -355,16 +410,20 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     );
   };
 
-  const renderAudiusPlaylistTrack = (track: any, playlistId: string, canEdit: boolean) => {
-    const combined: CombinedAudio = { 
-      source: 'audius', 
+  const renderAudiusPlaylistTrack = (
+    track: any,
+    playlistId: string,
+    canEdit: boolean,
+  ) => {
+    const combined: CombinedAudio = {
+      source: "audius",
       data: {
         id: track.id,
         title: track.title,
         user: { name: track.artist },
         duration: 0,
         artwork: track.artworkUrl,
-      } as any
+      } as any,
     };
 
     return (
@@ -373,6 +432,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
         className="group flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
       >
         <button
+          type="button"
           onClick={() => onSelectAudio(combined)}
           className="flex flex-1 items-center gap-4 text-left"
         >
@@ -389,7 +449,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
               <Radio className="h-6 w-6 text-primary-foreground" />
             </div>
           )}
-          
+
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold leading-none">{track.title}</h3>
@@ -420,13 +480,16 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
                 <AlertDialogHeader>
                   <AlertDialogTitle>Remove Track</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to remove "{track.title}" from this playlist?
+                    Are you sure you want to remove "{track.title}" from this
+                    playlist?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => handleRemoveAudiusTrack(playlistId, track.id)}
+                    onClick={() =>
+                      handleRemoveAudiusTrack(playlistId, track.id)
+                    }
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     Remove
@@ -440,12 +503,14 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
     );
   };
 
-  const showActorWarning = !isActorReady && !isActorInitializing && isAuthenticated;
+  const showActorWarning =
+    !isActorReady && !isActorInitializing && isAuthenticated;
 
   if (isLoadingPlaylists) {
     return (
       <div className="space-y-3 p-6">
         {[...Array(3)].map((_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list, index is safe
           <Skeleton key={i} className="h-24 w-full" />
         ))}
       </div>
@@ -476,7 +541,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
               </AlertDescription>
             </Alert>
           )}
-          
+
           {showActorWarning && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -486,7 +551,10 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
             </Alert>
           )}
 
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button className="w-full gap-2" disabled={!isActorReady}>
                 {isActorReady ? (
@@ -497,7 +565,7 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
                 ) : (
                   <>
                     <AlertCircle className="h-4 w-4" />
-                    {isActorInitializing ? 'Initializing...' : 'Not Ready'}
+                    {isActorInitializing ? "Initializing..." : "Not Ready"}
                   </>
                 )}
               </Button>
@@ -517,20 +585,29 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
                     placeholder="My Awesome Playlist"
                     value={newPlaylistName}
                     onChange={(e) => setNewPlaylistName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleCreatePlaylist();
-                      }
-                    }}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleCreatePlaylist()
+                    }
                   />
                 </div>
               </div>
               <DialogFooter>
                 <Button
-                  onClick={handleCreatePlaylist}
-                  disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending || !isActorReady}
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
                 >
-                  {createPlaylistMutation.isPending ? 'Creating...' : 'Create Playlist'}
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreatePlaylist}
+                  disabled={
+                    !newPlaylistName.trim() || createPlaylistMutation.isPending
+                  }
+                >
+                  {createPlaylistMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Create Playlist
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -538,42 +615,308 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
         </div>
       )}
 
-      {/* Embed Code Dialog */}
-      <Dialog open={embedCodeDialogOpen} onOpenChange={setEmbedCodeDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      <ScrollArea className="h-[calc(100%-80px)]">
+        {playlists.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+            <ListMusic className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Playlists Yet</h3>
+            <p className="text-sm text-muted-foreground">
+              {isAuthenticated
+                ? "Create your first playlist to organize your music"
+                : "Sign in to create and manage playlists"}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {playlists.map((playlist) => {
+              const canEdit = isPlaylistOwner(playlist);
+              const isExpanded = expandedPlaylists.has(playlist.id);
+              const totalTracks =
+                playlist.trackIds.length + playlist.audiusTracks.length;
+
+              return (
+                <div key={playlist.id} className="group">
+                  <div className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => togglePlaylistExpanded(playlist.id)}
+                      className="flex flex-1 items-center gap-3 text-left min-w-0"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
+                        <ListMusic className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm truncate">
+                            {playlist.title}
+                          </h3>
+                          {isExpanded ? (
+                            <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {totalTracks} {totalTracks === 1 ? "track" : "tracks"}
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canEdit && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedPlaylist(playlist);
+                                setIsAddTrackDialogOpen(true);
+                              }}
+                              disabled={!isActorReady}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Track
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openRenameDialog(playlist)}
+                              disabled={!isActorReady}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleGenerateEmbedCode(playlist.id)
+                              }
+                            >
+                              <Code className="mr-2 h-4 w-4" />
+                              Embed Code
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => openDeleteDialog(playlist.id)}
+                              className="text-destructive focus:text-destructive"
+                              disabled={!isActorReady}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Playlist
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t bg-muted/20">
+                      {totalTracks === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center px-6">
+                          <Music className="h-8 w-8 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            No tracks in this playlist
+                          </p>
+                          {canEdit && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-3"
+                              onClick={() => {
+                                setSelectedPlaylist(playlist);
+                                setIsAddTrackDialogOpen(true);
+                              }}
+                              disabled={!isActorReady}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Track
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {playlist.trackIds.map((trackId) =>
+                            renderPlaylistTrack(trackId, playlist.id, canEdit),
+                          )}
+                          {playlist.audiusTracks.map((track) =>
+                            renderAudiusPlaylistTrack(
+                              track,
+                              playlist.id,
+                              canEdit,
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Add Track Dialog */}
+      <Dialog
+        open={isAddTrackDialogOpen}
+        onOpenChange={setIsAddTrackDialogOpen}
+      >
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Playlist Embed Code</DialogTitle>
+            <DialogTitle>Add Track to Playlist</DialogTitle>
             <DialogDescription>
-              Copy this code to embed the playlist on your website or app.
+              Choose a track from your local library or search Audius.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Embed Code</Label>
+
+          <Tabs
+            value={addTrackTab}
+            onValueChange={(v) => setAddTrackTab(v as "local" | "audius")}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="local">Local Library</TabsTrigger>
+              <TabsTrigger value="audius">Audius</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="local" className="space-y-4 mt-4">
+              {isLoadingAudioFiles ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : audioFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Music className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No local audio files found
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Select Track</Label>
+                  <Select
+                    value={selectedTrackId}
+                    onValueChange={setSelectedTrackId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a track..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {audioFiles.map((file) => (
+                        <SelectItem key={file.id} value={file.id}>
+                          {file.title} — {file.creator}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <DialogFooter>
                 <Button
                   variant="outline"
-                  size="sm"
-                  onClick={copyEmbedCode}
-                  className="gap-2"
+                  onClick={() => setIsAddTrackDialogOpen(false)}
                 >
-                  <Copy className="h-4 w-4" />
-                  Copy
+                  Cancel
                 </Button>
+                <Button
+                  onClick={handleAddLocalTrack}
+                  disabled={
+                    !selectedTrackId ||
+                    addTrackMutation.isPending ||
+                    !isActorReady
+                  }
+                >
+                  {addTrackMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Add Track
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+
+            <TabsContent value="audius" className="space-y-4 mt-4">
+              <div className="relative">
+                <Input
+                  placeholder="Search Audius tracks..."
+                  value={audiusSearchQuery}
+                  onChange={(e) => setAudiusSearchQuery(e.target.value)}
+                />
               </div>
-              <Textarea
-                value={embedCode}
-                readOnly
-                className="font-mono text-sm"
-                rows={8}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setEmbedCodeDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
+
+              {isLoadingAudius ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : audiusSearchQuery.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Radio className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Search for Audius tracks above
+                  </p>
+                </div>
+              ) : audiusResults.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No results found
+                  </p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[240px]">
+                  <div className="space-y-2">
+                    {audiusResults.map((track) => {
+                      const artworkUrl =
+                        typeof track.artwork === "string"
+                          ? track.artwork
+                          : track.artwork?.["150x150"] ||
+                            track.artwork?.["480x480"] ||
+                            "";
+
+                      return (
+                        <button
+                          key={track.id}
+                          type="button"
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors text-left"
+                          onClick={() => handleAddAudiusTrack(track)}
+                        >
+                          {artworkUrl ? (
+                            <img
+                              src={artworkUrl}
+                              alt={track.title}
+                              className="h-10 w-10 rounded object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gradient-to-br from-primary/20 to-accent/20">
+                              <Radio className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {track.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {track.user.name}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="shrink-0"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -582,42 +925,33 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Playlist</DialogTitle>
-            <DialogDescription>
-              Enter a new name for your playlist.
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="rename-input">Playlist Name</Label>
+              <Label htmlFor="rename-playlist">New Name</Label>
               <Input
-                id="rename-input"
-                placeholder="Enter new name"
+                id="rename-playlist"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleRenamePlaylist();
-                  }
-                }}
+                onKeyDown={(e) => e.key === "Enter" && handleRenamePlaylist()}
               />
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setRenameDialogOpen(false);
-                setRenamePlaylistId('');
-                setRenameValue('');
-              }}
+              onClick={() => setRenameDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
               onClick={handleRenamePlaylist}
-              disabled={!renameValue.trim() || renamePlaylistMutation.isPending || !isActorReady}
+              disabled={!renameValue.trim() || renamePlaylistMutation.isPending}
             >
-              {renamePlaylistMutation.isPending ? 'Renaming...' : 'Rename'}
+              {renamePlaylistMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Rename
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -629,300 +963,56 @@ export function PlaylistManager({ onSelectAudio, onClose }: PlaylistManagerProps
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this playlist? This action cannot be undone.
+              Are you sure you want to delete this playlist? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setDeleteDialogOpen(false);
-              setDeletePlaylistId('');
-            }}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeletePlaylist}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Playlist
+              {deletePlaylistMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Track Dialog with Tabs */}
-      <Dialog open={isAddTrackDialogOpen} onOpenChange={(open) => {
-        setIsAddTrackDialogOpen(open);
-        if (!open) {
-          setSelectedPlaylist(null);
-          setSelectedTrackId('');
-          setAudiusSearchQuery('');
-          setAddTrackTab('local');
-        }
-      }}>
-        <DialogContent className="max-w-2xl">
+      {/* Embed Code Dialog */}
+      <Dialog open={embedCodeDialogOpen} onOpenChange={setEmbedCodeDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Track to Playlist</DialogTitle>
+            <DialogTitle>Embed Playlist</DialogTitle>
             <DialogDescription>
-              Select a track from your library or search Audius to add to "{selectedPlaylist?.title}".
+              Copy this code to embed the playlist on your website.
             </DialogDescription>
           </DialogHeader>
-          <Tabs value={addTrackTab} onValueChange={(v) => setAddTrackTab(v as 'local' | 'audius')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="local">Local Files</TabsTrigger>
-              <TabsTrigger value="audius">Audius</TabsTrigger>
-            </TabsList>
-            <TabsContent value="local" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="track-select">Select Track</Label>
-                <Select value={selectedTrackId} onValueChange={setSelectedTrackId}>
-                  <SelectTrigger id="track-select">
-                    <SelectValue placeholder="Choose a track" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingAudioFiles ? (
-                      <div className="p-2 text-sm text-muted-foreground">Loading tracks...</div>
-                    ) : audioFiles.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground">No tracks available</div>
-                    ) : (
-                      audioFiles
-                        .filter((file) => !selectedPlaylist?.trackIds.includes(file.id))
-                        .map((file) => (
-                          <SelectItem key={file.id} value={file.id}>
-                            {file.title}
-                          </SelectItem>
-                        ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={handleAddLocalTrack}
-                  disabled={!selectedTrackId || addTrackMutation.isPending || !isActorReady}
-                >
-                  {addTrackMutation.isPending ? 'Adding...' : 'Add Track'}
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-            <TabsContent value="audius" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="audius-search">Search Audius</Label>
-                <Input
-                  id="audius-search"
-                  placeholder="Search for tracks..."
-                  value={audiusSearchQuery}
-                  onChange={(e) => setAudiusSearchQuery(e.target.value)}
-                />
-              </div>
-              <ScrollArea className="h-[300px]">
-                {isLoadingAudius ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : audiusSearchQuery.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Radio className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Search for tracks on Audius</p>
-                  </div>
-                ) : audiusResults.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">No results found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {audiusResults.map((track) => {
-                      const artworkUrl = typeof track.artwork === 'string' 
-                        ? track.artwork 
-                        : track.artwork?.['150x150'] || '';
-                      
-                      return (
-                        <div
-                          key={track.id}
-                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => handleAddAudiusTrack(track)}
-                        >
-                          {artworkUrl ? (
-                            <img src={artworkUrl} alt={track.title} className="h-12 w-12 rounded" />
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded bg-gradient-to-br from-primary to-accent">
-                              <Radio className="h-6 w-6 text-primary-foreground" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm line-clamp-1">{track.title}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{track.user.name}</p>
-                          </div>
-                          <Plus className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-4 py-4">
+            <Textarea
+              value={embedCode}
+              readOnly
+              className="font-mono text-xs"
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEmbedCodeDialogOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={copyEmbedCode} className="gap-2">
+              <Copy className="h-4 w-4" />
+              Copy Code
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Playlists List */}
-      <ScrollArea className={isAuthenticated ? "h-[calc(100%-73px)]" : "h-full"}>
-        {playlists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <ListMusic className="h-16 w-16 text-muted-foreground/50" />
-            <p className="mt-4 text-lg font-medium text-muted-foreground">
-              No playlists yet
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isAuthenticated 
-                ? 'Create your first playlist to organize your tracks'
-                : 'Playlists will appear here once created'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4 p-4">
-            {playlists.map((playlist) => {
-              const isExpanded = expandedPlaylists.has(playlist.id);
-              const canEdit = isPlaylistOwner(playlist);
-              const totalTracks = playlist.trackIds.length + playlist.audiusTracks.length;
-              
-              return (
-                <div
-                  key={playlist.id}
-                  className="rounded-lg border bg-card text-card-foreground shadow-sm"
-                >
-                  <div className="flex items-center justify-between border-b p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-                        <ListMusic className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{playlist.title}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {totalTracks} track{totalTracks !== 1 ? 's' : ''} • Created {formatDate(playlist.creationTimestamp)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {canEdit && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => {
-                            setSelectedPlaylist(playlist);
-                            setIsAddTrackDialogOpen(true);
-                          }}
-                          disabled={!isActorReady}
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Track
-                        </Button>
-                      )}
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => handleGenerateEmbedCode(playlist.id)}
-                          >
-                            <Code className="mr-2 h-4 w-4" />
-                            Embed Code
-                          </DropdownMenuItem>
-
-                          {canEdit && (
-                            <>
-                              <DropdownMenuSeparator />
-                              
-                              <DropdownMenuItem
-                                onClick={() => openRenameDialog(playlist)}
-                                disabled={!isActorReady}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Rename
-                              </DropdownMenuItem>
-
-                              <DropdownMenuSeparator />
-
-                              <DropdownMenuItem
-                                onClick={() => openDeleteDialog(playlist.id)}
-                                disabled={!isActorReady}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  
-                  {totalTracks > 0 && (
-                    <div className="border-b">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-between rounded-none py-3 hover:bg-muted/50"
-                        onClick={() => togglePlaylistExpanded(playlist.id)}
-                      >
-                        <span className="text-sm font-medium">
-                          {isExpanded ? 'Hide' : 'Show'} Track List
-                        </span>
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    {totalTracks > 0 ? (
-                      <div className="divide-y divide-border">
-                        {playlist.trackIds.map((trackId) => 
-                          renderPlaylistTrack(trackId, playlist.id, canEdit)
-                        )}
-                        {playlist.audiusTracks.map((track) => 
-                          renderAudiusPlaylistTrack(track, playlist.id, canEdit)
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <Music className="h-12 w-12 text-muted-foreground/50" />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          No tracks in this playlist yet
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {totalTracks === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Music className="h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        No tracks in this playlist yet
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </ScrollArea>
     </div>
   );
 }

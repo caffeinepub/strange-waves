@@ -1,33 +1,38 @@
-import { useEffect, useState } from 'react';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { AudioUploader } from './components/AudioUploader';
-import { AudioPlayer } from './components/AudioPlayer';
-import { AudioLibrary } from './components/AudioLibrary';
-import { MusicMints } from './pages/MusicMints';
-import { useSelectedAudio } from './hooks/useQueries';
-import { Toaster } from '@/components/ui/sonner';
-import { ThemeProvider } from 'next-themes';
-import { useInternetIdentity } from './hooks/useInternetIdentity';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, ChevronDown, ChevronUp } from 'lucide-react';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { logComponentInit, logComponentSuccess, logComponentError } from './lib/diagnostics';
-import { Button } from '@/components/ui/button';
-import { WalletDisplay } from './components/WalletDisplay';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { ChevronDown, ChevronUp, Info } from "lucide-react";
+import { ThemeProvider } from "next-themes";
+import { useEffect, useState } from "react";
+import { AudioLibrary } from "./components/AudioLibrary";
+import { AudioPlayer } from "./components/AudioPlayer";
+import { AudioUploader } from "./components/AudioUploader";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Footer } from "./components/Footer";
+import { Header } from "./components/Header";
+import { WalletDisplay } from "./components/WalletDisplay";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { useSelectedAudio } from "./hooks/useQueries";
+import {
+  logComponentError,
+  logComponentInit,
+  logComponentSuccess,
+} from "./lib/diagnostics";
+import AlbumPage from "./pages/AlbumPage";
+import { MusicMints } from "./pages/MusicMints";
 
 function App() {
-  const [appError, setAppError] = useState<Error | null>(null);
+  const [_appError, setAppError] = useState<Error | null>(null);
   const [isUploadExpanded, setIsUploadExpanded] = useState(false);
   const [isEditExpanded, setIsEditExpanded] = useState(false);
-  const [currentPage, setCurrentPage] = useState<string>('home');
+  const [currentPage, setCurrentPage] = useState<string>("home");
 
   useEffect(() => {
-    logComponentInit('App');
+    logComponentInit("App");
     try {
-      logComponentSuccess('App');
+      logComponentSuccess("App");
     } catch (error) {
-      logComponentError('App', error as Error);
+      logComponentError("App", error as Error);
       setAppError(error as Error);
     }
   }, []);
@@ -39,29 +44,51 @@ function App() {
   const { selectedAudio, setSelectedAudio } = useSelectedAudio();
 
   const handleNavigate = (page: string) => {
+    console.log("[App] Navigating to page:", page);
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const renderPage = () => {
+    // Handle album routes: "album/<albumId>"
+    if (currentPage.startsWith("album/")) {
+      const albumId = currentPage.slice("album/".length);
+      console.log("[App] Rendering AlbumPage with albumId:", albumId);
+      if (!albumId) {
+        return (
+          <div className="container mx-auto px-4 py-16 text-center">
+            <p className="text-muted-foreground">No album specified.</p>
+          </div>
+        );
+      }
+      return <AlbumPage albumId={albumId} onNavigate={handleNavigate} />;
+    }
+
     switch (currentPage) {
-      case 'music-mints':
+      case "music-mints":
         return <MusicMints />;
-      case 'about':
+      case "fan-connect":
+        return (
+          <div className="container mx-auto px-4 py-8">
+            <h1 className="text-4xl font-bold mb-4">FAN Connect</h1>
+            <p className="text-lg text-muted-foreground">Coming soon...</p>
+          </div>
+        );
+      case "about":
         return (
           <div className="container mx-auto px-4 py-8">
             <h1 className="text-4xl font-bold mb-4">About Strange Waves</h1>
             <p className="text-lg text-muted-foreground">Coming soon...</p>
           </div>
         );
-      case 'merch':
+      case "merch":
         return (
           <div className="container mx-auto px-4 py-8">
             <h1 className="text-4xl font-bold mb-4">Merch</h1>
             <p className="text-lg text-muted-foreground">Coming soon...</p>
           </div>
         );
-      case 'socials':
+      case "socials":
         return (
           <div className="container mx-auto px-4 py-8">
             <h1 className="text-4xl font-bold mb-4">Socials</h1>
@@ -72,13 +99,13 @@ function App() {
         return (
           <div className="container mx-auto px-4 py-8">
             {/* Hero Section with Background Image */}
-            <section 
+            <section
               className="mb-6 overflow-hidden rounded-lg bg-cover bg-center bg-no-repeat"
               style={{
-                backgroundImage: 'url(/assets/StrangeWaves2.jpg)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                minHeight: '300px',
+                backgroundImage: "url(/assets/StrangeWaves2.jpg)",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                minHeight: "300px",
               }}
             />
 
@@ -88,7 +115,10 @@ function App() {
                 Welcome to Strange Waves
               </h1>
               <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-                Strange Waves is where genre boundaries dissolve and authenticity amplifies. We celebrate music that refuses to be commodified, championing Art that creates from the spirit, not the algorithm.
+                Strange Waves is where genre boundaries dissolve and
+                authenticity amplifies. We celebrate music that refuses to be
+                commodified, championing Art that creates from the spirit, not
+                the algorithm.
               </p>
             </section>
 
@@ -99,7 +129,8 @@ function App() {
                   <Info className="h-4 w-4" />
                   <AlertTitle>Login Required</AlertTitle>
                   <AlertDescription>
-                    Please login with Internet Identity to upload audio files and access your personal library.
+                    Please login with Internet Identity to upload audio files
+                    and access your personal library.
                   </AlertDescription>
                 </Alert>
               </section>
@@ -120,11 +151,12 @@ function App() {
                 <AudioLibrary
                   onSelectAudio={setSelectedAudio}
                   selectedAudioId={
-                    selectedAudio?.source === 'local' || selectedAudio?.source === 'remote'
+                    selectedAudio?.source === "local" ||
+                    selectedAudio?.source === "remote"
                       ? selectedAudio.data.id
-                      : selectedAudio?.source === 'audius'
-                      ? selectedAudio.data.id
-                      : undefined
+                      : selectedAudio?.source === "audius"
+                        ? selectedAudio.data.id
+                        : undefined
                   }
                 />
               </section>
@@ -135,13 +167,12 @@ function App() {
               <ErrorBoundary>
                 <section className="mb-12">
                   <div className="space-y-4">
-                    {/* Collapsible Toggle Button */}
                     <Button
                       onClick={() => setIsEditExpanded(!isEditExpanded)}
                       variant="outline"
                       className="w-full flex items-center justify-between py-6 text-lg font-semibold"
                     >
-                      <span>Edit & Manage</span>
+                      <span>Edit &amp; Manage</span>
                       {isEditExpanded ? (
                         <ChevronUp className="h-5 w-5" />
                       ) : (
@@ -149,12 +180,11 @@ function App() {
                       )}
                     </Button>
 
-                    {/* Collapsible Content with Animation */}
                     <div
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         isEditExpanded
-                          ? 'max-h-[2000px] opacity-100'
-                          : 'max-h-0 opacity-0'
+                          ? "max-h-[2000px] opacity-100"
+                          : "max-h-0 opacity-0"
                       }`}
                     >
                       <WalletDisplay />
@@ -169,7 +199,6 @@ function App() {
               <ErrorBoundary>
                 <section className="mb-12">
                   <div className="space-y-4">
-                    {/* Collapsible Toggle Button */}
                     <Button
                       onClick={() => setIsUploadExpanded(!isUploadExpanded)}
                       variant="outline"
@@ -183,12 +212,11 @@ function App() {
                       )}
                     </Button>
 
-                    {/* Collapsible Content with Animation */}
                     <div
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         isUploadExpanded
-                          ? 'max-h-[2000px] opacity-100'
-                          : 'max-h-0 opacity-0'
+                          ? "max-h-[2000px] opacity-100"
+                          : "max-h-0 opacity-0"
                       }`}
                     >
                       <AudioUploader />
@@ -207,10 +235,8 @@ function App() {
       <ErrorBoundary>
         <div className="flex min-h-screen flex-col bg-background">
           <Header onNavigate={handleNavigate} />
-          
-          <main className="flex-1">
-            {renderPage()}
-          </main>
+
+          <main className="flex-1">{renderPage()}</main>
 
           <Footer />
           <Toaster />

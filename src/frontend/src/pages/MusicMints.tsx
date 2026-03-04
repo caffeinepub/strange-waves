@@ -1,22 +1,57 @@
-import { useState } from 'react';
-import { useAllNFTRecordsWithParams } from '../hooks/useQueries';
-import { FileType, type NFTRecordWithParams, StableCoin } from '../backend';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Music, Image as ImageIcon, Package, Play, Pause, Calendar, User, DollarSign, TrendingUp, Users, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { WalletDisplay } from '../components/WalletDisplay';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  DollarSign,
+  Image as ImageIcon,
+  Music,
+  Package,
+  Pause,
+  Play,
+  TrendingUp,
+  User,
+  Users,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import {
+  FileType,
+  type NFTRecordWithParams,
+  type StableCoin,
+} from "../backend";
+import { WalletDisplay } from "../components/WalletDisplay";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useAllNFTRecordsWithParams } from "../hooks/useQueries";
 
 export function MusicMints() {
-  const [selectedNFT, setSelectedNFT] = useState<{ record: NFTRecordWithParams; index: number } | null>(null);
+  const [selectedNFT, setSelectedNFT] = useState<{
+    record: NFTRecordWithParams;
+    index: number;
+  } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null,
+  );
   const [isEditExpanded, setIsEditExpanded] = useState(false);
 
   const { data: nftRecords, isLoading } = useAllNFTRecordsWithParams();
@@ -24,9 +59,18 @@ export function MusicMints() {
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
   // Filter NFTs by type
-  const audioOnlyNFTs = nftRecords?.filter((record) => record.metadata.fileType === FileType.audio) || [];
-  const albumArtOnlyNFTs = nftRecords?.filter((record) => record.metadata.fileType === FileType.image) || [];
-  const combinedNFTs = nftRecords?.filter((record) => record.metadata.fileType === FileType.combined) || [];
+  const audioOnlyNFTs =
+    nftRecords?.filter(
+      (record) => record.metadata.fileType === FileType.audio,
+    ) || [];
+  const albumArtOnlyNFTs =
+    nftRecords?.filter(
+      (record) => record.metadata.fileType === FileType.image,
+    ) || [];
+  const combinedNFTs =
+    nftRecords?.filter(
+      (record) => record.metadata.fileType === FileType.combined,
+    ) || [];
 
   const handlePlayPause = async (nftRecord: NFTRecordWithParams) => {
     if (!nftRecord.audioBlob) return;
@@ -40,7 +84,7 @@ export function MusicMints() {
       audio.play();
       setIsPlaying(true);
       setAudioElement(audio);
-      
+
       audio.onended = () => {
         setIsPlaying(false);
         setAudioElement(null);
@@ -59,7 +103,11 @@ export function MusicMints() {
 
   const formatDate = (timestamp: bigint) => {
     const date = new Date(Number(timestamp) / 1000000);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
   const formatPrice = (price: bigint, stableCoin: StableCoin) => {
@@ -70,16 +118,19 @@ export function MusicMints() {
 
   const getStableCoinSymbol = (coin: StableCoin) => {
     const symbols: Record<StableCoin, string> = {
-      usdc: 'USDC',
-      tusd: 'TUSD',
-      rlusd: 'RLUSD',
-      usde: 'USDE',
-      usdp: 'USDP',
+      usdc: "USDC",
+      tusd: "TUSD",
+      rlusd: "RLUSD",
+      usde: "USDE",
+      usdp: "USDP",
     };
-    return symbols[coin] || 'USD';
+    return symbols[coin] || "USD";
   };
 
-  const NFTCard = ({ record, index }: { record: NFTRecordWithParams; index: number }) => {
+  const NFTCard = ({
+    record,
+    index,
+  }: { record: NFTRecordWithParams; index: number }) => {
     const getIcon = () => {
       switch (record.metadata.fileType) {
         case FileType.audio:
@@ -94,16 +145,16 @@ export function MusicMints() {
     const getTypeLabel = () => {
       switch (record.metadata.fileType) {
         case FileType.audio:
-          return 'Audio Only';
+          return "Audio Only";
         case FileType.image:
-          return 'Album Art Only';
+          return "Album Art Only";
         case FileType.combined:
-          return 'Combined Package';
+          return "Combined Package";
       }
     };
 
     return (
-      <Card 
+      <Card
         className="group cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
         onClick={() => setSelectedNFT({ record, index })}
       >
@@ -137,7 +188,9 @@ export function MusicMints() {
             </div>
           )}
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg line-clamp-1">{record.metadata.title}</h3>
+            <h3 className="font-semibold text-lg line-clamp-1">
+              {record.metadata.title}
+            </h3>
             <p className="text-sm text-muted-foreground line-clamp-1">
               <User className="inline h-3 w-3 mr-1" />
               {record.metadata.artist}
@@ -170,7 +223,8 @@ export function MusicMints() {
           </div>
           <h3 className="text-lg font-semibold mb-2">No NFTs Yet</h3>
           <p className="text-sm text-muted-foreground max-w-md">
-            No NFTs have been minted in this category yet. Start creating your collection!
+            No NFTs have been minted in this category yet. Start creating your
+            collection!
           </p>
         </div>
       );
@@ -179,7 +233,11 @@ export function MusicMints() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {nfts.map((record, index) => (
-          <NFTCard key={index} record={record} index={index} />
+          <NFTCard
+            key={`${record.metadata.title}-${record.metadata.mintTimestamp}`}
+            record={record}
+            index={index}
+          />
         ))}
       </div>
     );
@@ -208,7 +266,9 @@ export function MusicMints() {
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Music Mints</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Explore the NFT collection minted on Strange Waves. Each NFT is fully compatible with ICP wallets and ready for on-chain ownership and transfer.
+          Explore the NFT collection minted on Strange Waves. Each NFT is fully
+          compatible with ICP wallets and ready for on-chain ownership and
+          transfer.
         </p>
       </div>
 
@@ -233,7 +293,11 @@ export function MusicMints() {
         </TabsList>
 
         <TabsContent value="all">
-          {isLoading ? <LoadingSkeleton /> : <NFTGrid nfts={nftRecords || []} />}
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : (
+            <NFTGrid nfts={nftRecords || []} />
+          )}
         </TabsContent>
 
         <TabsContent value="audio">
@@ -241,7 +305,11 @@ export function MusicMints() {
         </TabsContent>
 
         <TabsContent value="image">
-          {isLoading ? <LoadingSkeleton /> : <NFTGrid nfts={albumArtOnlyNFTs} />}
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : (
+            <NFTGrid nfts={albumArtOnlyNFTs} />
+          )}
         </TabsContent>
 
         <TabsContent value="combined">
@@ -271,8 +339,8 @@ export function MusicMints() {
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
                 isEditExpanded
-                  ? 'max-h-[3000px] opacity-100'
-                  : 'max-h-0 opacity-0'
+                  ? "max-h-[3000px] opacity-100"
+                  : "max-h-0 opacity-0"
               }`}
             >
               <div className="relative">
@@ -298,13 +366,23 @@ export function MusicMints() {
           <DialogContent className="max-w-3xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                {selectedNFT.record.metadata.fileType === FileType.audio && <Music className="h-5 w-5" />}
-                {selectedNFT.record.metadata.fileType === FileType.image && <ImageIcon className="h-5 w-5" />}
-                {selectedNFT.record.metadata.fileType === FileType.combined && <Package className="h-5 w-5" />}
+                {selectedNFT.record.metadata.fileType === FileType.audio && (
+                  <Music className="h-5 w-5" />
+                )}
+                {selectedNFT.record.metadata.fileType === FileType.image && (
+                  <ImageIcon className="h-5 w-5" />
+                )}
+                {selectedNFT.record.metadata.fileType === FileType.combined && (
+                  <Package className="h-5 w-5" />
+                )}
                 {selectedNFT.record.metadata.title}
               </DialogTitle>
               <DialogDescription>
-                NFT #{selectedNFT.index} • {formatPrice(selectedNFT.record.params.price, selectedNFT.record.params.stableCoin)}
+                NFT #{selectedNFT.index} •{" "}
+                {formatPrice(
+                  selectedNFT.record.params.price,
+                  selectedNFT.record.params.stableCoin,
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -325,7 +403,9 @@ export function MusicMints() {
                 {selectedNFT.record.audioBlob && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Audio Playback</CardTitle>
+                      <CardTitle className="text-base">
+                        Audio Playback
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-4">
@@ -348,7 +428,8 @@ export function MusicMints() {
                         </Button>
                         <div className="flex-1">
                           <p className="text-sm text-muted-foreground">
-                            Click to {isPlaying ? 'pause' : 'play'} the audio track
+                            Click to {isPlaying ? "pause" : "play"} the audio
+                            track
                           </p>
                         </div>
                       </div>
@@ -364,19 +445,28 @@ export function MusicMints() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label className="text-sm font-semibold">Artist</Label>
-                      <p className="text-sm text-muted-foreground">{selectedNFT.record.metadata.artist}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedNFT.record.metadata.artist}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-semibold">Description</Label>
-                      <p className="text-sm text-muted-foreground">{selectedNFT.record.metadata.description}</p>
+                      <Label className="text-sm font-semibold">
+                        Description
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedNFT.record.metadata.description}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-sm font-semibold">Type</Label>
                       <div className="mt-1">
                         <Badge>
-                          {selectedNFT.record.metadata.fileType === FileType.audio && 'Audio Only'}
-                          {selectedNFT.record.metadata.fileType === FileType.image && 'Album Art Only'}
-                          {selectedNFT.record.metadata.fileType === FileType.combined && 'Combined Package'}
+                          {selectedNFT.record.metadata.fileType ===
+                            FileType.audio && "Audio Only"}
+                          {selectedNFT.record.metadata.fileType ===
+                            FileType.image && "Album Art Only"}
+                          {selectedNFT.record.metadata.fileType ===
+                            FileType.combined && "Combined Package"}
                         </Badge>
                       </div>
                     </div>
@@ -410,7 +500,10 @@ export function MusicMints() {
                       <div>
                         <Label className="text-sm font-semibold">Price</Label>
                         <p className="text-lg font-bold text-primary">
-                          {formatPrice(selectedNFT.record.params.price, selectedNFT.record.params.stableCoin)}
+                          {formatPrice(
+                            selectedNFT.record.params.price,
+                            selectedNFT.record.params.stableCoin,
+                          )}
                         </p>
                       </div>
                       <div>
@@ -421,9 +514,14 @@ export function MusicMints() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-sm font-semibold">Payment Method</Label>
+                      <Label className="text-sm font-semibold">
+                        Payment Method
+                      </Label>
                       <p className="text-sm text-muted-foreground">
-                        ICRC-1 / ck{getStableCoinSymbol(selectedNFT.record.params.stableCoin)}
+                        ICRC-1 / ck
+                        {getStableCoinSymbol(
+                          selectedNFT.record.params.stableCoin,
+                        )}
                       </p>
                     </div>
                   </CardContent>
@@ -437,23 +535,29 @@ export function MusicMints() {
                       Revenue Splits
                     </CardTitle>
                     <CardDescription>
-                      {selectedNFT.record.params.revenueSplits.length} recipient(s)
+                      {selectedNFT.record.params.revenueSplits.length}{" "}
+                      recipient(s)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {selectedNFT.record.params.revenueSplits.map((split, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-mono text-muted-foreground truncate">
-                              {split.address.toString()}
-                            </p>
+                      {selectedNFT.record.params.revenueSplits.map(
+                        (split, idx) => (
+                          <div
+                            key={`${split.address.toString()}-${idx}`}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-mono text-muted-foreground truncate">
+                                {split.address.toString()}
+                              </p>
+                            </div>
+                            <Badge variant="secondary" className="ml-3">
+                              {Number(split.percentage)}%
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="ml-3">
-                            {Number(split.percentage)}%
-                          </Badge>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -461,16 +565,20 @@ export function MusicMints() {
                 {/* Chain Fusion Info */}
                 <Card className="border-primary/50 bg-primary/5">
                   <CardHeader>
-                    <CardTitle className="text-base">Chain Fusion Ready</CardTitle>
+                    <CardTitle className="text-base">
+                      Chain Fusion Ready
+                    </CardTitle>
                     <CardDescription>
                       This NFT is architected for future interoperability
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Built with ICP DIP-721 standard and Chain Fusion architecture, this NFT is ready 
-                      for future chain-key interoperability with external blockchains including Ethereum, 
-                      Solana, and more. Fully compatible with ICP wallets for on-chain ownership and transfer.
+                      Built with ICP DIP-721 standard and Chain Fusion
+                      architecture, this NFT is ready for future chain-key
+                      interoperability with external blockchains including
+                      Ethereum, Solana, and more. Fully compatible with ICP
+                      wallets for on-chain ownership and transfer.
                     </p>
                   </CardContent>
                 </Card>
@@ -483,6 +591,9 @@ export function MusicMints() {
   );
 }
 
-function Label({ children, className }: { children: React.ReactNode; className?: string }) {
+function Label({
+  children,
+  className,
+}: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }

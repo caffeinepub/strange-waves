@@ -1,20 +1,48 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Loader2, Sparkles, Music, Image as ImageIcon, Package, Plus, Trash2, DollarSign } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import type { AudioFile, RevenueSplit, StableCoin } from '../backend';
-import { FileType } from '../backend';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DollarSign,
+  Image as ImageIcon,
+  Loader2,
+  Music,
+  Package,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import type { AudioFile, RevenueSplit, StableCoin } from "../backend";
+import { FileType } from "../backend";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 interface NFTMintDialogProps {
   open: boolean;
@@ -34,11 +62,11 @@ interface NFTMintDialogProps {
 }
 
 const STABLECOIN_OPTIONS = [
-  { value: 'usdc', label: 'USDC (USD Coin)', symbol: 'USDC' },
-  { value: 'tusd', label: 'TUSD (TrueUSD)', symbol: 'TUSD' },
-  { value: 'rlusd', label: 'RLUSD (Ripple USD)', symbol: 'RLUSD' },
-  { value: 'usde', label: 'USDE (Ethena USDe)', symbol: 'USDE' },
-  { value: 'usdp', label: 'USDP (Pax Dollar)', symbol: 'USDP' },
+  { value: "usdc", label: "USDC (USD Coin)", symbol: "USDC" },
+  { value: "tusd", label: "TUSD (TrueUSD)", symbol: "TUSD" },
+  { value: "rlusd", label: "RLUSD (Ripple USD)", symbol: "RLUSD" },
+  { value: "usde", label: "USDE (Ethena USDe)", symbol: "USDE" },
+  { value: "usdp", label: "USDP (Pax Dollar)", symbol: "USDP" },
 ];
 
 export function NFTMintDialog({
@@ -52,14 +80,18 @@ export function NFTMintDialog({
   const [mintType, setMintType] = useState<FileType>(FileType.combined);
   const [title, setTitle] = useState(audioFile.title);
   const [artist, setArtist] = useState(audioFile.creator);
-  const [description, setDescription] = useState('');
-  
+  const [description, setDescription] = useState("");
+
   // Custom parameters
-  const [price, setPrice] = useState<string>('10');
-  const [stableCoin, setStableCoin] = useState<StableCoin>('usdc' as StableCoin);
+  const [price, setPrice] = useState<string>("10");
+  const [stableCoin, setStableCoin] = useState<StableCoin>(
+    "usdc" as StableCoin,
+  );
   const [royaltyPercentage, setRoyaltyPercentage] = useState<number>(10);
-  const [revenueSplits, setRevenueSplits] = useState<Array<{ address: string; percentage: string }>>([
-    { address: identity?.getPrincipal().toString() || '', percentage: '100' }
+  const [revenueSplits, setRevenueSplits] = useState<
+    Array<{ address: string; percentage: string }>
+  >([
+    { address: identity?.getPrincipal().toString() || "", percentage: "100" },
   ]);
 
   const handleMint = async () => {
@@ -68,15 +100,15 @@ export function NFTMintDialog({
     }
 
     // Validate price
-    const priceNum = parseFloat(price);
-    if (isNaN(priceNum) || priceNum <= 0) {
+    const priceNum = Number.parseFloat(price);
+    if (Number.isNaN(priceNum) || priceNum <= 0) {
       return;
     }
 
     // Validate revenue splits
     const totalPercentage = revenueSplits.reduce((sum, split) => {
-      const pct = parseFloat(split.percentage);
-      return sum + (isNaN(pct) ? 0 : pct);
+      const pct = Number.parseFloat(split.percentage);
+      return sum + (Number.isNaN(pct) ? 0 : pct);
     }, 0);
 
     if (Math.abs(totalPercentage - 100) > 0.01) {
@@ -85,10 +117,10 @@ export function NFTMintDialog({
 
     // Convert revenue splits to backend format
     const revenueSplitsFormatted: RevenueSplit[] = revenueSplits
-      .filter(split => split.address.trim() !== '')
-      .map(split => ({
+      .filter((split) => split.address.trim() !== "")
+      .map((split) => ({
         address: split.address.trim() as any, // Will be converted to Principal by backend
-        percentage: BigInt(Math.round(parseFloat(split.percentage)))
+        percentage: BigInt(Math.round(Number.parseFloat(split.percentage))),
       }));
 
     if (revenueSplitsFormatted.length === 0) {
@@ -108,7 +140,7 @@ export function NFTMintDialog({
   };
 
   const addRevenueSplit = () => {
-    setRevenueSplits([...revenueSplits, { address: '', percentage: '0' }]);
+    setRevenueSplits([...revenueSplits, { address: "", percentage: "0" }]);
   };
 
   const removeRevenueSplit = (index: number) => {
@@ -117,15 +149,19 @@ export function NFTMintDialog({
     }
   };
 
-  const updateRevenueSplit = (index: number, field: 'address' | 'percentage', value: string) => {
+  const updateRevenueSplit = (
+    index: number,
+    field: "address" | "percentage",
+    value: string,
+  ) => {
     const updated = [...revenueSplits];
     updated[index][field] = value;
     setRevenueSplits(updated);
   };
 
   const totalPercentage = revenueSplits.reduce((sum, split) => {
-    const pct = parseFloat(split.percentage);
-    return sum + (isNaN(pct) ? 0 : pct);
+    const pct = Number.parseFloat(split.percentage);
+    return sum + (Number.isNaN(pct) ? 0 : pct);
   }, 0);
 
   const isValidPercentage = Math.abs(totalPercentage - 100) < 0.01;
@@ -133,11 +169,11 @@ export function NFTMintDialog({
   const getMintTypeLabel = (type: FileType) => {
     switch (type) {
       case FileType.audio:
-        return 'Audio Only';
+        return "Audio Only";
       case FileType.image:
-        return 'Album Art Only';
+        return "Album Art Only";
       case FileType.combined:
-        return 'Audio + Album Art Package';
+        return "Audio + Album Art Package";
     }
   };
 
@@ -155,11 +191,11 @@ export function NFTMintDialog({
   const getMintTypeDescription = (type: FileType) => {
     switch (type) {
       case FileType.audio:
-        return 'Mint an NFT containing only the audio file';
+        return "Mint an NFT containing only the audio file";
       case FileType.image:
-        return 'Mint an NFT containing only the album artwork';
+        return "Mint an NFT containing only the album artwork";
       case FileType.combined:
-        return 'Mint an NFT package with both audio and album art';
+        return "Mint an NFT package with both audio and album art";
     }
   };
 
@@ -170,7 +206,9 @@ export function NFTMintDialog({
     return false;
   };
 
-  const selectedStableCoin = STABLECOIN_OPTIONS.find(opt => opt.value === stableCoin);
+  const selectedStableCoin = STABLECOIN_OPTIONS.find(
+    (opt) => opt.value === stableCoin,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -181,7 +219,8 @@ export function NFTMintDialog({
             Mint NFT with Custom Parameters
           </DialogTitle>
           <DialogDescription>
-            Create an NFT with custom pricing, royalties, and revenue splits using stablecoin payments.
+            Create an NFT with custom pricing, royalties, and revenue splits
+            using stablecoin payments.
           </DialogDescription>
         </DialogHeader>
 
@@ -206,9 +245,14 @@ export function NFTMintDialog({
                   )}
                   <div className="flex-1">
                     <h3 className="font-semibold">{audioFile.title}</h3>
-                    <p className="text-sm text-muted-foreground">{audioFile.creator}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {audioFile.creator}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Duration: {Math.floor(Number(audioFile.duration) / 60)}:{(Number(audioFile.duration) % 60).toString().padStart(2, '0')}
+                      Duration: {Math.floor(Number(audioFile.duration) / 60)}:
+                      {(Number(audioFile.duration) % 60)
+                        .toString()
+                        .padStart(2, "0")}
                     </p>
                   </div>
                 </div>
@@ -218,39 +262,53 @@ export function NFTMintDialog({
             {/* Mint Type Selection */}
             <div className="space-y-3">
               <Label>NFT Type *</Label>
-              <RadioGroup value={mintType} onValueChange={(value) => setMintType(value as FileType)}>
+              <RadioGroup
+                value={mintType}
+                onValueChange={(value) => setMintType(value as FileType)}
+              >
                 <div className="space-y-3">
-                  {[FileType.audio, FileType.image, FileType.combined].map((type) => {
-                    const disabled = !canMintType(type);
-                    return (
-                      <div
-                        key={type}
-                        className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
-                          mintType === type ? 'border-primary bg-primary/5' : 'border-border'
-                        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'}`}
-                        onClick={() => !disabled && setMintType(type)}
-                      >
-                        <RadioGroupItem value={type} id={type} disabled={disabled} className="mt-1" />
-                        <div className="flex-1">
-                          <Label
-                            htmlFor={type}
-                            className={`flex items-center gap-2 font-semibold ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                          >
-                            {getMintTypeIcon(type)}
-                            {getMintTypeLabel(type)}
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {getMintTypeDescription(type)}
-                          </p>
-                          {disabled && type !== FileType.audio && (
-                            <p className="text-xs text-destructive mt-1">
-                              No album artwork available for this track
+                  {[FileType.audio, FileType.image, FileType.combined].map(
+                    (type) => {
+                      const disabled = !canMintType(type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          disabled={disabled}
+                          className={`w-full flex items-start space-x-3 rounded-lg border p-4 transition-colors text-left ${
+                            mintType === type
+                              ? "border-primary bg-primary/5"
+                              : "border-border"
+                          } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"}`}
+                          onClick={() => !disabled && setMintType(type)}
+                        >
+                          <RadioGroupItem
+                            value={type}
+                            id={type}
+                            disabled={disabled}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <Label
+                              htmlFor={type}
+                              className={`flex items-center gap-2 font-semibold ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                            >
+                              {getMintTypeIcon(type)}
+                              {getMintTypeLabel(type)}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {getMintTypeDescription(type)}
                             </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                            {disabled && type !== FileType.audio && (
+                              <p className="text-xs text-destructive mt-1">
+                                No album artwork available for this track
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    },
+                  )}
                 </div>
               </RadioGroup>
             </div>
@@ -260,7 +318,7 @@ export function NFTMintDialog({
             {/* Metadata Fields */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">NFT Metadata</h3>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="nft-title">NFT Title *</Label>
                 <Input
@@ -322,7 +380,12 @@ export function NFTMintDialog({
 
                 <div className="space-y-2">
                   <Label htmlFor="stablecoin">Stablecoin *</Label>
-                  <Select value={stableCoin} onValueChange={(value) => setStableCoin(value as StableCoin)}>
+                  <Select
+                    value={stableCoin}
+                    onValueChange={(value) =>
+                      setStableCoin(value as StableCoin)
+                    }
+                  >
                     <SelectTrigger id="stablecoin">
                       <SelectValue />
                     </SelectTrigger>
@@ -338,7 +401,9 @@ export function NFTMintDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="royalty">Royalty Percentage: {royaltyPercentage}%</Label>
+                <Label htmlFor="royalty">
+                  Royalty Percentage: {royaltyPercentage}%
+                </Label>
                 <Slider
                   id="royalty"
                   min={0}
@@ -380,21 +445,32 @@ export function NFTMintDialog({
 
               <div className="space-y-3">
                 {revenueSplits.map((split, index) => (
-                  <Card key={index}>
+                  // biome-ignore lint/suspicious/noArrayIndexKey: revenue splits have no stable id
+                  <Card key={`split-${index}`}>
                     <CardContent className="pt-4">
                       <div className="flex gap-3">
                         <div className="flex-1 space-y-2">
-                          <Label htmlFor={`address-${index}`}>Wallet Address *</Label>
+                          <Label htmlFor={`address-${index}`}>
+                            Wallet Address *
+                          </Label>
                           <Input
                             id={`address-${index}`}
                             value={split.address}
-                            onChange={(e) => updateRevenueSplit(index, 'address', e.target.value)}
+                            onChange={(e) =>
+                              updateRevenueSplit(
+                                index,
+                                "address",
+                                e.target.value,
+                              )
+                            }
                             placeholder="Enter principal ID or wallet address"
                             disabled={isLoading}
                           />
                         </div>
                         <div className="w-32 space-y-2">
-                          <Label htmlFor={`percentage-${index}`}>Percentage *</Label>
+                          <Label htmlFor={`percentage-${index}`}>
+                            Percentage *
+                          </Label>
                           <Input
                             id={`percentage-${index}`}
                             type="number"
@@ -402,7 +478,13 @@ export function NFTMintDialog({
                             max="100"
                             step="0.01"
                             value={split.percentage}
-                            onChange={(e) => updateRevenueSplit(index, 'percentage', e.target.value)}
+                            onChange={(e) =>
+                              updateRevenueSplit(
+                                index,
+                                "percentage",
+                                e.target.value,
+                              )
+                            }
                             placeholder="0"
                             disabled={isLoading}
                           />
@@ -428,7 +510,8 @@ export function NFTMintDialog({
               {!isValidPercentage && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Revenue split percentages must total 100%. Current total: {totalPercentage.toFixed(2)}%
+                    Revenue split percentages must total 100%. Current total:{" "}
+                    {totalPercentage.toFixed(2)}%
                   </AlertDescription>
                 </Alert>
               )}
@@ -444,11 +527,15 @@ export function NFTMintDialog({
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">NFT Type:</span>
-                  <span className="font-medium">{getMintTypeLabel(mintType)}</span>
+                  <span className="font-medium">
+                    {getMintTypeLabel(mintType)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price:</span>
-                  <span className="font-medium">{price} {selectedStableCoin?.symbol}</span>
+                  <span className="font-medium">
+                    {price} {selectedStableCoin?.symbol}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Royalty:</span>
@@ -456,11 +543,15 @@ export function NFTMintDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Revenue Splits:</span>
-                  <span className="font-medium">{revenueSplits.length} address(es)</span>
+                  <span className="font-medium">
+                    {revenueSplits.length} address(es)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Payment Method:</span>
-                  <span className="font-medium">ICRC-1 / ck{selectedStableCoin?.symbol}</span>
+                  <span className="font-medium">
+                    ICRC-1 / ck{selectedStableCoin?.symbol}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -468,19 +559,23 @@ export function NFTMintDialog({
         </ScrollArea>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleMint}
             disabled={
-              isLoading || 
-              !title.trim() || 
-              !artist.trim() || 
+              isLoading ||
+              !title.trim() ||
+              !artist.trim() ||
               !description.trim() ||
               !isValidPercentage ||
-              parseFloat(price) <= 0 ||
-              revenueSplits.some(s => !s.address.trim())
+              Number.parseFloat(price) <= 0 ||
+              revenueSplits.some((s) => !s.address.trim())
             }
           >
             {isLoading ? (

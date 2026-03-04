@@ -31,6 +31,32 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const AlbumTier = IDL.Record({
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'supply' : IDL.Nat,
+  'price' : IDL.Nat,
+});
+export const AlbumInput = IDL.Record({
+  'id' : IDL.Text,
+  'theme' : IDL.Text,
+  'listenerTier' : AlbumTier,
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'collectorTier' : AlbumTier,
+  'investorTier' : AlbumTier,
+});
+export const AlbumView = IDL.Record({
+  'id' : IDL.Text,
+  'theme' : IDL.Text,
+  'listenerTier' : AlbumTier,
+  'creationTimestamp' : IDL.Int,
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'collectorTier' : AlbumTier,
+  'trackIds' : IDL.Vec(IDL.Text),
+  'investorTier' : AlbumTier,
+});
 export const PlaylistView = IDL.Record({
   'id' : IDL.Text,
   'title' : IDL.Text,
@@ -60,6 +86,7 @@ export const AudioFile = IDL.Record({
   'uploadTimestamp' : IDL.Int,
   'coverImage' : IDL.Opt(ExternalBlob),
   'genre' : Genre,
+  'albumId' : IDL.Opt(IDL.Text),
   'isPublic' : IDL.Bool,
 });
 export const FileType = IDL.Variant({
@@ -163,11 +190,15 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addAudiusTrackToPlaylist' : IDL.Func([IDL.Text, AudiusTrack], [], []),
+  'addTrackToAlbum' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'addTrackToPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createAlbum' : IDL.Func([AlbumInput], [AlbumView], []),
   'createPlaylist' : IDL.Func([IDL.Text, IDL.Text], [PlaylistView], []),
+  'deleteAlbum' : IDL.Func([IDL.Text], [], []),
   'deleteAudioFile' : IDL.Func([IDL.Text], [], []),
   'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+  'getAlbum' : IDL.Func([IDL.Text], [IDL.Opt(AlbumView)], ['query']),
   'getAllAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
   'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
   'getAllNFTRecordsWithParams' : IDL.Func(
@@ -177,6 +208,11 @@ export const idlService = IDL.Service({
     ),
   'getAllPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
   'getAudioFile' : IDL.Func([IDL.Text], [IDL.Opt(AudioFile)], ['query']),
+  'getAudioFilesByAlbum' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(AudioFile)],
+      ['query'],
+    ),
   'getCallerAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
   'getCallerNFTRecordsWithParams' : IDL.Func(
       [],
@@ -200,6 +236,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listAlbums' : IDL.Func([], [IDL.Vec(AlbumView)], ['query']),
   'mintNFT' : IDL.Func([MintNFTRequest], [MintNFTResponse], []),
   'mintNFTwithParams' : IDL.Func(
       [MintNFTWithParamsRequest],
@@ -209,8 +246,14 @@ export const idlService = IDL.Service({
   'removeAudiusTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'removeTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'updateAlbum' : IDL.Func([IDL.Text, AlbumInput], [AlbumView], []),
   'updatePlaylistTitle' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'uploadAudioFile' : IDL.Func([AudioFile], [IDL.Text], []),
+  'uploadTrackWithAlbum' : IDL.Func(
+      [AudioFile, IDL.Opt(IDL.Text)],
+      [IDL.Text],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -238,6 +281,32 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const AlbumTier = IDL.Record({
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'supply' : IDL.Nat,
+    'price' : IDL.Nat,
+  });
+  const AlbumInput = IDL.Record({
+    'id' : IDL.Text,
+    'theme' : IDL.Text,
+    'listenerTier' : AlbumTier,
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'collectorTier' : AlbumTier,
+    'investorTier' : AlbumTier,
+  });
+  const AlbumView = IDL.Record({
+    'id' : IDL.Text,
+    'theme' : IDL.Text,
+    'listenerTier' : AlbumTier,
+    'creationTimestamp' : IDL.Int,
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'collectorTier' : AlbumTier,
+    'trackIds' : IDL.Vec(IDL.Text),
+    'investorTier' : AlbumTier,
   });
   const PlaylistView = IDL.Record({
     'id' : IDL.Text,
@@ -268,6 +337,7 @@ export const idlFactory = ({ IDL }) => {
     'uploadTimestamp' : IDL.Int,
     'coverImage' : IDL.Opt(ExternalBlob),
     'genre' : Genre,
+    'albumId' : IDL.Opt(IDL.Text),
     'isPublic' : IDL.Bool,
   });
   const FileType = IDL.Variant({
@@ -371,11 +441,15 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addAudiusTrackToPlaylist' : IDL.Func([IDL.Text, AudiusTrack], [], []),
+    'addTrackToAlbum' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'addTrackToPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createAlbum' : IDL.Func([AlbumInput], [AlbumView], []),
     'createPlaylist' : IDL.Func([IDL.Text, IDL.Text], [PlaylistView], []),
+    'deleteAlbum' : IDL.Func([IDL.Text], [], []),
     'deleteAudioFile' : IDL.Func([IDL.Text], [], []),
     'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+    'getAlbum' : IDL.Func([IDL.Text], [IDL.Opt(AlbumView)], ['query']),
     'getAllAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
     'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
     'getAllNFTRecordsWithParams' : IDL.Func(
@@ -385,6 +459,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getAllPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
     'getAudioFile' : IDL.Func([IDL.Text], [IDL.Opt(AudioFile)], ['query']),
+    'getAudioFilesByAlbum' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(AudioFile)],
+        ['query'],
+      ),
     'getCallerAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
     'getCallerNFTRecordsWithParams' : IDL.Func(
         [],
@@ -408,6 +487,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listAlbums' : IDL.Func([], [IDL.Vec(AlbumView)], ['query']),
     'mintNFT' : IDL.Func([MintNFTRequest], [MintNFTResponse], []),
     'mintNFTwithParams' : IDL.Func(
         [MintNFTWithParamsRequest],
@@ -417,8 +497,14 @@ export const idlFactory = ({ IDL }) => {
     'removeAudiusTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'removeTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'updateAlbum' : IDL.Func([IDL.Text, AlbumInput], [AlbumView], []),
     'updatePlaylistTitle' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'uploadAudioFile' : IDL.Func([AudioFile], [IDL.Text], []),
+    'uploadTrackWithAlbum' : IDL.Func(
+        [AudioFile, IDL.Opt(IDL.Text)],
+        [IDL.Text],
+        [],
+      ),
   });
 };
 

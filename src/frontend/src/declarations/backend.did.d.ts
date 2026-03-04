@@ -10,6 +10,32 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface AlbumInput {
+  'id' : string,
+  'theme' : string,
+  'listenerTier' : AlbumTier,
+  'name' : string,
+  'description' : string,
+  'collectorTier' : AlbumTier,
+  'investorTier' : AlbumTier,
+}
+export interface AlbumTier {
+  'name' : string,
+  'description' : string,
+  'supply' : bigint,
+  'price' : bigint,
+}
+export interface AlbumView {
+  'id' : string,
+  'theme' : string,
+  'listenerTier' : AlbumTier,
+  'creationTimestamp' : bigint,
+  'name' : string,
+  'description' : string,
+  'collectorTier' : AlbumTier,
+  'trackIds' : Array<string>,
+  'investorTier' : AlbumTier,
+}
 export interface AudioFile {
   'id' : string,
   'title' : string,
@@ -21,6 +47,7 @@ export interface AudioFile {
   'uploadTimestamp' : bigint,
   'coverImage' : [] | [ExternalBlob],
   'genre' : Genre,
+  'albumId' : [] | [string],
   'isPublic' : boolean,
 }
 export interface AudiusTrack {
@@ -140,16 +167,21 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addAudiusTrackToPlaylist' : ActorMethod<[string, AudiusTrack], undefined>,
+  'addTrackToAlbum' : ActorMethod<[string, string], undefined>,
   'addTrackToPlaylist' : ActorMethod<[string, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createAlbum' : ActorMethod<[AlbumInput], AlbumView>,
   'createPlaylist' : ActorMethod<[string, string], PlaylistView>,
+  'deleteAlbum' : ActorMethod<[string], undefined>,
   'deleteAudioFile' : ActorMethod<[string], undefined>,
   'deletePlaylist' : ActorMethod<[string], undefined>,
+  'getAlbum' : ActorMethod<[string], [] | [AlbumView]>,
   'getAllAudioFiles' : ActorMethod<[], Array<AudioFile>>,
   'getAllNFTRecords' : ActorMethod<[], Array<NFTRecord>>,
   'getAllNFTRecordsWithParams' : ActorMethod<[], Array<NFTRecordWithParams>>,
   'getAllPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getAudioFile' : ActorMethod<[string], [] | [AudioFile]>,
+  'getAudioFilesByAlbum' : ActorMethod<[string], Array<AudioFile>>,
   'getCallerAudioFiles' : ActorMethod<[], Array<AudioFile>>,
   'getCallerNFTRecordsWithParams' : ActorMethod<[], Array<NFTRecordWithParams>>,
   'getCallerPlaylists' : ActorMethod<[], Array<PlaylistView>>,
@@ -161,6 +193,7 @@ export interface _SERVICE {
   'getPlaylist' : ActorMethod<[string], [] | [PlaylistView]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listAlbums' : ActorMethod<[], Array<AlbumView>>,
   'mintNFT' : ActorMethod<[MintNFTRequest], MintNFTResponse>,
   'mintNFTwithParams' : ActorMethod<
     [MintNFTWithParamsRequest],
@@ -169,8 +202,10 @@ export interface _SERVICE {
   'removeAudiusTrackFromPlaylist' : ActorMethod<[string, string], undefined>,
   'removeTrackFromPlaylist' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'updateAlbum' : ActorMethod<[string, AlbumInput], AlbumView>,
   'updatePlaylistTitle' : ActorMethod<[string, string], undefined>,
   'uploadAudioFile' : ActorMethod<[AudioFile], string>,
+  'uploadTrackWithAlbum' : ActorMethod<[AudioFile, [] | [string]], string>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
