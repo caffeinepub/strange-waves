@@ -1,0 +1,32 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Add track upload form to SScc Album Page",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Add owner-only track upload form to AlbumPage with audio file, cover image, title, description inputs, and immediate track listing update after successful upload",
+      "acceptanceCriteria": [
+        "The upload form is rendered below the existing track listing on the SScc AlbumPage.",
+        "The form includes fields for: audio file upload, cover image upload, track title (text input), and track description (textarea).",
+        "The form is only visible when the authenticated user is the owner/admin principal.",
+        "Submitting the form uploads the audio and image to the backend and associates them with the SScc album.",
+        "After a successful upload, the newly uploaded track appears in the track listing on the page without requiring a full page reload.",
+        "While uploading, a loading indicator is shown and the submit button is disabled.",
+        "Validation prevents submission if the audio file or title is missing."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/AlbumPage.tsx",
+          "operation": "modify",
+          "description": "Add a track upload form section below the existing track listing. The form must include: a file input for audio track file (accepts audio/*), a file input for cover image (accepts image/*), a text input for track title (required), and a textarea for track description. Use the authorization component to check if the current user is an admin via isCallerAdmin() and only render the form when true. Wire the form submission to call uploadTrackWithAlbum from useQueries with the SScc album ID ('sscc'), converting the audio file and optional cover image to ExternalBlob instances using ExternalBlob.fromBytes(). Display upload progress using ExternalBlob.withUploadProgress(). Show a loading spinner and disable the submit button during upload. After successful upload, the useGetAudioFilesByAlbum query will automatically refetch and display the new track. Add validation to prevent submission when audio file or title is missing. Verify the blob-storage component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Ensure the useUploadTrackWithAlbum mutation exists and properly handles uploading audio files with optional cover images to a specific album using the backend's uploadTrackWithAlbum method. If this mutation does not exist, add it. The mutation should accept AudioFile data including the file blob (as ExternalBlob), optional coverImage blob (as ExternalBlob), title, creator, genre, and the albumId. After successful upload, invalidate the ['audioFilesByAlbum', albumId] query key to trigger a refetch of the album's tracks. Verify the blob-storage component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

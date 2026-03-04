@@ -1,0 +1,45 @@
+{
+  "kind": "build_request",
+  "title": "Add track upload form to SScc Album Page",
+  "projectName": "Strange Waves",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "On the AlbumPage (frontend/src/pages/AlbumPage.tsx), add a track upload form section below the existing track listing. The form must include: a file input for the audio track file, a file input for a cover image, a text input for the track title, and a textarea for the track description. The form should only be visible to the authenticated owner (check principal). On submit, the track data (file, image, title, description) should be uploaded to the backend and the new track should appear in the track listing immediately after upload.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "add a music track upload section below the existing content. It should let myself, the owner, upload a track file, attach image, and a description area to label my track"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The upload form is rendered below the existing track listing on the SScc AlbumPage.",
+        "The form includes fields for: audio file upload, cover image upload, track title (text input), and track description (textarea).",
+        "The form is only visible when the authenticated user is the owner/admin principal.",
+        "Submitting the form uploads the audio and image to the backend and associates them with the SScc album.",
+        "After a successful upload, the newly uploaded track appears in the track listing on the page without requiring a full page reload.",
+        "While uploading, a loading indicator is shown and the submit button is disabled.",
+        "Validation prevents submission if the audio file or title is missing."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not modify any files listed in frontend.immutablePaths.",
+    "The upload form must only be visible to the authenticated owner — it must not be shown to anonymous or non-owner visitors.",
+    "Keep all backend logic in backend/main.mo (single-actor architecture).",
+    "Do not introduce NFT minting logic in this build — scope is limited to the upload form only."
+  ],
+  "nonGoals": [
+    "NFT minting functionality (deferred to a future build).",
+    "Any changes to pages other than AlbumPage.",
+    "Editing immutable frontend paths."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

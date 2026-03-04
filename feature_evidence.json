@@ -1,0 +1,27 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-on-the-albumpage-frontend-src-pages-albumpage-tsx-add-a-track-upload-form-section-below-the-existing-track-listing-the-form-must-include-a-file-input-for-the-audio-track-file-a-file-input-for-a-cover-image-a-text-input-for-the-track-title-and-a-textarea-for-the-track-description-the-form-should-only-be-visible-to-the-authenticated-owner-check-principal-on-submit-the-track-data-file-image-title-description-should-be-uploaded-to-the-backend-and-the-new-track-should-appear-in-the-track-listing-immediately-after-upload",
+      "featureTitle": "On the AlbumPage (frontend/src/pages/AlbumPage.tsx), add a track upload form section below the existing track listing. The form must include: a file input for the audio track file, a file input for a cover image, a text input for the track title, and a textarea for the track description. The form should only be visible to the authenticated owner (check principal). On submit, the track data (file, image, title, description) should be uploaded to the backend and the new track should appear in the track listing immediately after upload.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/AlbumPage.tsx"
+      ],
+      "components": [
+        "blob-storage@4.0.0",
+        "http-outcalls@3.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "authorization@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

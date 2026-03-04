@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "Music/NFT project featuring an SScc album page. The owner wants to upload music tracks with images and descriptions, with the intent to mint them as NFTs.",
+  "architectural_notes": [
+    "SScc album page is a key page in the project where music track uploads and NFT minting features are being built"
+  ],
+  "known_issues": [
+    "Repeated deployment failures when trying to add the music track upload/NFT section — build has failed multiple times; currently attempting a simplified version (track upload form with title and description only)"
+  ],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-on-the-albumpage-frontend-src-pages-albumpage-tsx-add-a-track-upload-form-section-below-the-existing-track-listing-the-form-must-include-a-file-input-for-the-audio-track-file-a-file-input-for-a-cover-image-a-text-input-for-the-track-title-and-a-textarea-for-the-track-description-the-form-should-only-be-visible-to-the-authenticated-owner-check-principal-on-submit-the-track-data-file-image-title-description-should-be-uploaded-to-the-backend-and-the-new-track-should-appear-in-the-track-listing-immediately-after-upload",
+      "title": "On the AlbumPage (frontend/src/pages/AlbumPage.tsx), add a track upload form section below the existing track listing. The form must include: a file input for the audio track file, a file input for a cover image, a text input for the track title, and a textarea for the track description. The form should only be visible to the authenticated owner (check principal). On submit, the track data (file, image, title, description) should be uploaded to the backend and the new track should appear in the track listing immediately after upload.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "SScc album page: add a music track upload form (track file, image, description/title) for the owner, with intent to mint tracks as NFTs",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "SScc",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}
