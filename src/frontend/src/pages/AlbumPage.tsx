@@ -647,6 +647,11 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
 
   const { data: allTracks = [] } = useAudioFiles();
 
+  // Filter to only SScc-titled tracks for the collection section
+  const ssccTracks = allTracks.filter((t) =>
+    t.title.toLowerCase().includes("sscc"),
+  );
+
   // Show the upload button as soon as the user is signed in with a non-anonymous
   // principal. The backend upload mutation enforces admin-only access and will
   // return an error if the caller is not actually an admin.
@@ -685,8 +690,10 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
     },
   ];
 
+  // selectedTrackIndex uses ssccTracks so the "X / Y" counter in the featured
+  // player reflects the SScc collection size, not the full library.
   const selectedTrackIndex = selectedTrack
-    ? allTracks.findIndex((t) => t.id === selectedTrack.id)
+    ? ssccTracks.findIndex((t) => t.id === selectedTrack.id)
     : -1;
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -838,7 +845,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
             <FeaturedPlayer
               selectedTrack={selectedTrack}
               trackIndex={selectedTrackIndex >= 0 ? selectedTrackIndex : 0}
-              totalTracks={allTracks.length}
+              totalTracks={ssccTracks.length}
             />
           </section>
 
@@ -915,7 +922,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
               >
                 Collection
               </span>
-              {allTracks.length > 0 && (
+              {ssccTracks.length > 0 && (
                 <span
                   className="text-xs px-2 py-0.5 rounded-full"
                   style={{
@@ -924,16 +931,16 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
                     border: "1px solid oklch(0.78 0.20 145 / 0.3)",
                   }}
                 >
-                  {allTracks.length}{" "}
-                  {allTracks.length === 1 ? "track" : "tracks"}
+                  {ssccTracks.length}{" "}
+                  {ssccTracks.length === 1 ? "track" : "tracks"}
                 </span>
               )}
             </div>
 
             <div className="px-6 pb-6">
-              {allTracks.length > 0 ? (
+              {ssccTracks.length > 0 ? (
                 <ul className="space-y-3" data-ocid="album.collection.list">
-                  {allTracks.map((track, i) => {
+                  {ssccTracks.map((track, i) => {
                     const isSelected = selectedTrack?.id === track.id;
                     return (
                       <li
@@ -1081,10 +1088,11 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
                     style={{ color: "oklch(0.72 0.18 175)" }}
                   />
                   <p
-                    className="text-sm"
+                    className="text-sm text-center max-w-xs"
                     style={{ color: "oklch(0.45 0.06 200)" }}
                   >
-                    No tracks yet — the collection is forming.
+                    No SScc tracks yet — upload tracks with &ldquo;SScc&rdquo;
+                    in the title to populate this collection.
                   </p>
                 </div>
               )}
