@@ -5,13 +5,16 @@ import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
 import { AudioLibrary } from "./components/AudioLibrary";
-import { AudioPlayer } from "./components/AudioPlayer";
 import { AudioUploader } from "./components/AudioUploader";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { PersistentAudioPlayer } from "./components/PersistentAudioPlayer";
+import {
+  AudioPlayerProvider,
+  useAudioPlayer,
+} from "./contexts/AudioPlayerContext";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useSelectedAudio } from "./hooks/useQueries";
 import {
   logComponentError,
   logComponentInit,
@@ -20,7 +23,7 @@ import {
 import AlbumPage from "./pages/AlbumPage";
 import { MusicMints } from "./pages/MusicMints";
 
-function App() {
+function AppContent() {
   const [_appError, setAppError] = useState<Error | null>(null);
   const [isUploadExpanded, setIsUploadExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState<string>("home");
@@ -35,11 +38,10 @@ function App() {
     }
   }, []);
 
-  // Internet Identity authentication
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
-  const { selectedAudio, setSelectedAudio } = useSelectedAudio();
+  const { setTrack } = useAudioPlayer();
 
   const handleNavigate = (page: string) => {
     console.log("[App] Navigating to page:", page);
@@ -48,7 +50,6 @@ function App() {
   };
 
   const renderPage = () => {
-    // Handle album routes: "album/<albumId>"
     if (currentPage.startsWith("album/")) {
       const albumId = currentPage.slice("album/".length);
       console.log("[App] Rendering AlbumPage with albumId:", albumId);
@@ -96,7 +97,7 @@ function App() {
       default:
         return (
           <div className="container mx-auto px-4 py-8">
-            {/* Hero Section with Background Image */}
+            {/* Hero Section */}
             <section
               className="mb-6 overflow-hidden rounded-lg bg-cover bg-center bg-no-repeat"
               style={{
@@ -107,7 +108,6 @@ function App() {
               }}
             />
 
-            {/* Hero Text Section - Below Background Image */}
             <section className="mb-8 text-center">
               <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 Welcome to Strange Waves
@@ -120,7 +120,6 @@ function App() {
               </p>
             </section>
 
-            {/* Authentication Notice */}
             {!isAuthenticated && (
               <section className="mb-8">
                 <Alert>
@@ -134,33 +133,17 @@ function App() {
               </section>
             )}
 
-            {/* Player Section - Always available */}
-            {selectedAudio && (
-              <ErrorBoundary>
-                <section className="mb-12">
-                  <AudioPlayer audio={selectedAudio} />
-                </section>
-              </ErrorBoundary>
-            )}
-
-            {/* Library Section - Always available */}
+            {/* Library Section */}
             <ErrorBoundary>
               <section className="mb-12">
                 <AudioLibrary
-                  onSelectAudio={setSelectedAudio}
-                  selectedAudioId={
-                    selectedAudio?.source === "local" ||
-                    selectedAudio?.source === "remote"
-                      ? selectedAudio.data.id
-                      : selectedAudio?.source === "audius"
-                        ? selectedAudio.data.id
-                        : undefined
-                  }
+                  onSelectAudio={setTrack}
+                  selectedAudioId={undefined}
                 />
               </section>
             </ErrorBoundary>
 
-            {/* Upload Section - Collapsible at bottom, only show when authenticated */}
+            {/* Upload Section */}
             {isAuthenticated && (
               <ErrorBoundary>
                 <section className="mb-12">
@@ -177,7 +160,6 @@ function App() {
                         <ChevronDown className="h-5 w-5" />
                       )}
                     </Button>
-
                     <div
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         isUploadExpanded
@@ -197,16 +179,23 @@ function App() {
   };
 
   return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <Header onNavigate={handleNavigate} />
+      <main className="flex-1 pb-20">{renderPage()}</main>
+      <PersistentAudioPlayer />
+      <Footer />
+      <Toaster />
+    </div>
+  );
+}
+
+function App() {
+  return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <ErrorBoundary>
-        <div className="flex min-h-screen flex-col bg-background">
-          <Header onNavigate={handleNavigate} />
-
-          <main className="flex-1">{renderPage()}</main>
-
-          <Footer />
-          <Toaster />
-        </div>
+        <AudioPlayerProvider>
+          <AppContent />
+        </AudioPlayerProvider>
       </ErrorBoundary>
     </ThemeProvider>
   );

@@ -14,6 +14,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AudioFile } from "../backend";
 import { NFTMintDialog } from "../components/NFTMintDialog";
+import { useAudioPlayer } from "../contexts/AudioPlayerContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useAudioFiles, useMintNFT } from "../hooks/useQueries";
 
@@ -859,6 +860,7 @@ export default function AlbumPage({
   const [mintTrack, setMintTrack] = useState<AudioFile | null>(null);
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
 
+  const { setTrack: setGlobalTrack } = useAudioPlayer();
   const { identity } = useInternetIdentity();
   const mintMutation = useMintNFT();
 
@@ -1109,7 +1111,10 @@ export default function AlbumPage({
                       index={i}
                       isSelected={selectedTrack?.id === track.id}
                       isAuthenticated={isAuthenticated}
-                      onSelect={setSelectedTrack}
+                      onSelect={(track) => {
+                        setSelectedTrack(track);
+                        setGlobalTrack({ source: "local", data: track });
+                      }}
                       onMint={(t) => {
                         setMintTrack(t);
                         setMintDialogOpen(true);
