@@ -6,8 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Info, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Info, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -165,6 +166,45 @@ export function CanisterInfoModal({
             )}
           </div>
 
+          {/* Account ID for exchanges — only shown when signed in */}
+          {isAuthenticated && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  ICP Account ID (for exchanges)
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Your Account ID is derived from your Principal ID and is
+                  required for deposits from centralized exchanges like Coinbase
+                  or Binance.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  data-ocid="canister_info.account_id.button"
+                >
+                  <a
+                    href="https://nns.ic0.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Find Account ID on NNS
+                  </a>
+                </Button>
+                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  Log into nns.ic0.app with the same Internet Identity to view
+                  your Account ID in the correct format.
+                </p>
+              </div>
+              <Separator />
+            </>
+          )}
+
           {/* Backend Canister ID Section */}
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">
@@ -219,6 +259,7 @@ export function CanisterInfoModal({
                 variant="destructive"
                 onClick={handleDisconnect}
                 className="w-full"
+                data-ocid="canister_info.delete_button"
               >
                 Disconnect Wallet
               </Button>
@@ -232,6 +273,7 @@ export function CanisterInfoModal({
           onClick={() => onOpenChange(false)}
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
           aria-label="Close"
+          data-ocid="canister_info.close_button"
         >
           <X className="h-4 w-4" />
         </button>

@@ -10,6 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Actor, HttpAgent } from "@dfinity/agent";
+import type { IDL } from "@dfinity/candid";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -19,6 +21,7 @@ import {
   Clock,
   Coins,
   Copy,
+  ExternalLink,
   Image as ImageIcon,
   Info,
   Loader2,
@@ -28,11 +31,47 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FileType } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useCallerNFTRecordsWithParams } from "../hooks/useQueries";
+
+const ICP_LEDGER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+
+// Minimal ICRC-1 IDL for icrc1_balance_of
+const icrc1IDL = ({ IDL: I }: { IDL: typeof IDL }) => {
+  const Account = I.Record({
+    owner: I.Principal,
+    subaccount: I.Opt(I.Vec(I.Nat8)),
+  });
+  return I.Service({
+    icrc1_balance_of: I.Func([Account], [I.Nat], ["query"]),
+  });
+};
+
+async function fetchICPBalance(principal: any): Promise<number> {
+  const isLocal = window.location.hostname.includes("localhost");
+  const host = isLocal ? "http://localhost:4943" : "https://icp-api.io";
+
+  const agent = await HttpAgent.create({ host });
+  if (isLocal) {
+    await agent.fetchRootKey();
+  }
+
+  const ledger = Actor.createActor(icrc1IDL as any, {
+    agent,
+    canisterId: ICP_LEDGER_ID,
+  });
+
+  const balance = await (ledger as any).icrc1_balance_of({
+    owner: principal,
+    subaccount: [],
+  });
+
+  // balance is a BigInt in e8s; 1 ICP = 100_000_000 e8s
+  return Number(balance) / 100_000_000;
+}
 
 // Supported token types for ICP ecosystem
 interface TokenBalance {
@@ -49,6 +88,8 @@ export function WalletDisplay() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [icpBalance, setIcpBalance] = useState<number | null>(null);
+  const [isLoadingICP, setIsLoadingICP] = useState(false);
 
   // Fetch user's NFTs
   const {
@@ -59,11 +100,29 @@ export function WalletDisplay() {
 
   const walletAddress = identity?.getPrincipal().toString() || "";
 
+  const loadICPBalance = useCallback(async () => {
+    if (!identity) return;
+    setIsLoadingICP(true);
+    try {
+      const balance = await fetchICPBalance(identity.getPrincipal());
+      setIcpBalance(balance);
+    } catch (err) {
+      console.error("Failed to fetch ICP balance:", err);
+      setIcpBalance(null);
+    } finally {
+      setIsLoadingICP(false);
+    }
+  }, [identity]);
+
+  // Load ICP balance on mount and when identity changes
+  useEffect(() => {
+    loadICPBalance();
+  }, [loadICPBalance]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refetchNFTs();
-      // In production, this would also refresh token balances via ICRC-1 queries
+      await Promise.all([refetchNFTs(), loadICPBalance()]);
       toast.success("Wallet data refreshed");
     } catch (_error) {
       toast.error("Failed to refresh wallet data");
@@ -87,14 +146,17 @@ export function WalletDisplay() {
     setExpandedTx(expandedTx === txId ? null : txId);
   };
 
-  // Enhanced token balances with auto-detection support
-  // In production, these would be queried via ICRC-1 standard from the backend
+  // Token balances — ICP is live, others are placeholders
   const tokenBalances: TokenBalance[] = [
     {
       symbol: "ICP",
       name: "Internet Computer",
-      balance: "0.00",
-      usdValue: "0.00",
+      balance: isLoadingICP
+        ? "..."
+        : icpBalance !== null
+          ? icpBalance.toFixed(4)
+          : "0.0000",
+      usdValue: "—",
       isAutoDetected: false,
     },
     {
@@ -135,7 +197,6 @@ export function WalletDisplay() {
         stableCoin: nft.params.stableCoin,
       },
     })),
-    // Mock token transactions (in production, these would come from backend)
     {
       id: "tx-token-1",
       type: "token" as const,
@@ -353,6 +414,7 @@ export function WalletDisplay() {
       <CardContent>
         {/* Wallet Address Section */}
         <div className="mb-6 p-4 rounded-lg border bg-muted/30">
+          {/* Principal ID */}
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -364,10 +426,10 @@ export function WalletDisplay() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p className="text-xs">
-                        This principal ID functions as your in-app wallet
-                        address for sending and receiving assets. If you connect
-                        an external wallet (Plug, Stoic, or Oisy), that address
-                        will be used instead.
+                        This is your Principal ID — valid for in-app
+                        transactions and NFT ownership. For deposits from
+                        centralized exchanges (Coinbase, Binance, Kraken), you
+                        need your Account ID, available at nns.ic0.app.
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -400,6 +462,55 @@ export function WalletDisplay() {
             Use this address to receive NFTs, tokens, and other assets on the
             Internet Computer.
           </p>
+
+          {/* Account ID for exchanges */}
+          <Separator className="my-4" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">
+                ICP Account ID (for exchanges)
+              </h3>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      Your Account ID is a 64-character hex address derived from
+                      your Principal ID. Centralized exchanges (Coinbase,
+                      Binance, Kraken) require this format for ICP deposits.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your Account ID is derived from your Principal ID and is required
+              for deposits from centralized exchanges like Coinbase or Binance.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              data-ocid="wallet.account_id.button"
+            >
+              <a
+                href="https://nns.ic0.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Find Account ID on NNS
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+              <Info className="h-3 w-3 mt-0.5 shrink-0" />
+              Log into nns.ic0.app with the same Internet Identity to view your
+              Account ID in the correct format.
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="assets" className="w-full">
@@ -459,9 +570,16 @@ export function WalletDisplay() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">{token.balance}</p>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {token.symbol === "ICP" && isLoadingICP ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                        ) : null}
+                        <p className="font-semibold text-sm">{token.balance}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        ${token.usdValue} USD
+                        {token.usdValue !== "—"
+                          ? `$${token.usdValue} USD`
+                          : token.usdValue}
                       </p>
                     </div>
                   </div>
