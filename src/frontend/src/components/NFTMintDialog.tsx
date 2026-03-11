@@ -35,9 +35,11 @@ import {
   Loader2,
   Music,
   Package,
+  Paperclip,
   Plus,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import type { AudioFile, RevenueSplit, StableCoin } from "../backend";
@@ -81,6 +83,7 @@ export function NFTMintDialog({
   const [title, setTitle] = useState(audioFile.title);
   const [artist, setArtist] = useState(audioFile.creator);
   const [description, setDescription] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   // Custom parameters
   const [price, setPrice] = useState<string>("10");
@@ -351,6 +354,63 @@ export function NFTMintDialog({
                   rows={3}
                   disabled={isLoading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Attachments (Optional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Attach PDFs, images, audio, or video files for special NFT
+                  customization.
+                </p>
+                <label
+                  className="flex items-center gap-2 cursor-pointer border border-dashed border-muted-foreground/40 rounded-lg px-4 py-3 hover:border-primary/60 transition-colors"
+                  data-ocid="nft.attachment.dropzone"
+                >
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Click to attach files (PDF, image, audio, video)
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,image/*,audio/*,video/*"
+                    className="hidden"
+                    disabled={isLoading}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setAttachments((prev) => [
+                          ...prev,
+                          ...Array.from(e.target.files!),
+                        ]);
+                      }
+                    }}
+                  />
+                </label>
+                {attachments.length > 0 && (
+                  <ul className="space-y-1 mt-2">
+                    {attachments.map((file, i) => (
+                      <li
+                        key={file.name}
+                        className="flex items-center justify-between text-sm bg-muted/40 rounded px-3 py-1.5"
+                      >
+                        <span className="truncate max-w-[260px]">
+                          {file.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAttachments((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            )
+                          }
+                          className="ml-2 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 

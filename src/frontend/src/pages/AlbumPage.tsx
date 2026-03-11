@@ -28,9 +28,11 @@ interface AlbumPageProps {
 }
 
 const SSCC_ABOUT = [
-  "SScc no.2 is the SteveStrange curator's cut into the exploration of pushing ai generated sounds with human curation to find the multi-dimensional realms the mind's hue of thought will discover when frequencies activate the dormant or the empowerment of being.",
-  "SScc is a journey of finding the frequency of energy, and making it our moment.",
-  "The tracks are comprehensive models of the structure of reality and identity, through which prior reality interpretations can be united within a greater picture of innerstanding.",
+  "SScc is the SteveStrange curator's cut into the exploration of pushing ai generated sounds with human curation to find the multi-dimensional realms the mind's hue of thought will discover when frequencies activate the dormant or the empowerment of being.",
+  "A comprehensive model of the structure of reality and identity, through which prior reality interpretations can be united within a greater picture of innerstanding.",
+  "Cosmic Structure, the context within which our evolution occurs and the hidden mechanics of evolution as being the process of dimensional ascension, through progressive cellular transmutation. The Anatomy of multi-dimensional identity and the krystal body, our personal, indelible connection to the Divine, and the point of union between science and spirituality. We have discovered our hidden evolutionary potential to reclaim our immortality and re-enter the cycles of higher evolution through methods of activation. Can we hear the frequency to explore some oscillation.",
+  "Beginning measures we can take, to prepare our bodies for the time it takes. Acceleration and continuum shift, while simultaneously improving our health, creating personal protection and accelerating the process of our self. Biological and spiritual evolution.",
+  "The choice belongs to each of us.",
 ];
 
 function formatTime(s: number): string {
