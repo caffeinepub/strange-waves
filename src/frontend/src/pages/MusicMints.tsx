@@ -41,7 +41,10 @@ import {
 } from "../backend";
 import { WalletDisplay } from "../components/WalletDisplay";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useAllNFTRecordsWithParams } from "../hooks/useQueries";
+import {
+  useAllNFTRecordsWithParams,
+  useCallerNFTRecordsWithParams,
+} from "../hooks/useQueries";
 
 export function MusicMints() {
   const [selectedNFT, setSelectedNFT] = useState<{
@@ -55,6 +58,8 @@ export function MusicMints() {
   const [isEditExpanded, setIsEditExpanded] = useState(false);
 
   const { data: nftRecords, isLoading } = useAllNFTRecordsWithParams();
+  const { data: myNFTs = [], isLoading: isLoadingMyNFTs } =
+    useCallerNFTRecordsWithParams();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
@@ -274,7 +279,9 @@ export function MusicMints() {
 
       {/* NFT Categories */}
       <Tabs defaultValue="all" className="w-full mb-12">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
+        <TabsList
+          className={`grid w-full mb-8 ${isAuthenticated ? "grid-cols-5" : "grid-cols-4"}`}
+        >
           <TabsTrigger value="all">
             All NFTs ({nftRecords?.length || 0})
           </TabsTrigger>
@@ -290,6 +297,12 @@ export function MusicMints() {
             <Package className="h-4 w-4 mr-2" />
             Combined ({combinedNFTs.length})
           </TabsTrigger>
+          {isAuthenticated && (
+            <TabsTrigger value="my-mints" data-ocid="music_mints.my_mints.tab">
+              <User className="h-4 w-4 mr-2" />
+              My Mints ({myNFTs.length})
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="all">
@@ -315,6 +328,25 @@ export function MusicMints() {
         <TabsContent value="combined">
           {isLoading ? <LoadingSkeleton /> : <NFTGrid nfts={combinedNFTs} />}
         </TabsContent>
+
+        {isAuthenticated && (
+          <TabsContent value="my-mints">
+            {isLoadingMyNFTs ? (
+              <LoadingSkeleton />
+            ) : myNFTs.length === 0 ? (
+              <div
+                className="text-center py-16 text-muted-foreground"
+                data-ocid="music_mints.my_mints.empty_state"
+              >
+                <User className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                <p className="text-xl font-semibold mb-2">No mints yet</p>
+                <p className="text-sm">NFTs you mint will appear here.</p>
+              </div>
+            ) : (
+              <NFTGrid nfts={myNFTs} />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Edit/Wallet Section - Collapsible at bottom */}

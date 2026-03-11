@@ -870,8 +870,11 @@ export function WalletDisplay() {
           </div>
 
           <Tabs defaultValue="assets" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="assets">Assets</TabsTrigger>
+              <TabsTrigger value="nfts" data-ocid="wallet.nft.tab">
+                NFTs ({nfts.length})
+              </TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
             </TabsList>
 
@@ -980,6 +983,31 @@ export function WalletDisplay() {
                   </ScrollArea>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="nfts" className="mt-4">
+              {isLoadingNFTs ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : nfts.length === 0 ? (
+                <div
+                  className="text-center py-12 text-muted-foreground"
+                  data-ocid="wallet.nft.empty_state"
+                >
+                  <Package className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium text-sm">No NFTs minted yet</p>
+                  <p className="text-xs mt-1">
+                    Mint your first NFT from any track on the platform.
+                  </p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {nfts.map((nft, index) => renderNFTCard(nft, index))}
+                  </div>
+                </ScrollArea>
+              )}
             </TabsContent>
 
             <TabsContent value="transactions" className="space-y-4 mt-4">
