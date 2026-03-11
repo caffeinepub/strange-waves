@@ -13,13 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,16 +26,18 @@ import {
   Package,
   Paperclip,
   Plus,
+  RefreshCw,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AudioFile, RevenueSplit, StableCoin } from "../backend";
 import { FileType } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 type EditionType = "1of1" | "collection";
+type PaymentMethod = "icp" | StableCoin;
 
 interface NFTMintDialogProps {
   open: boolean;
@@ -61,13 +56,36 @@ interface NFTMintDialogProps {
   isLoading: boolean;
 }
 
-const STABLECOIN_OPTIONS = [
-  { value: "usdc", label: "USDC (USD Coin)", symbol: "USDC" },
-  { value: "tusd", label: "TUSD (TrueUSD)", symbol: "TUSD" },
-  { value: "rlusd", label: "RLUSD (Ripple USD)", symbol: "RLUSD" },
-  { value: "usde", label: "USDE (Ethena USDe)", symbol: "USDE" },
-  { value: "usdp", label: "USDP (Pax Dollar)", symbol: "USDP" },
+const PAYMENT_OPTIONS = [
+  {
+    value: "icp",
+    label: "ICP (Internet Computer)",
+    symbol: "ICP",
+    isICP: true,
+  },
+  { value: "usdc", label: "USDC (USD Coin)", symbol: "USDC", isICP: false },
+  { value: "tusd", label: "TUSD (TrueUSD)", symbol: "TUSD", isICP: false },
+  {
+    value: "rlusd",
+    label: "RLUSD (Ripple USD)",
+    symbol: "RLUSD",
+    isICP: false,
+  },
+  { value: "usde", label: "USDE (Ethena USDe)", symbol: "USDE", isICP: false },
+  { value: "usdp", label: "USDP (Pax Dollar)", symbol: "USDP", isICP: false },
 ];
+
+async function fetchICPPriceUSD(): Promise<number | null> {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=internet-computer&vs_currencies=usd",
+    );
+    const data = await res.json();
+    return data?.["internet-computer"]?.usd ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function NFTMintDialog({
   open,
@@ -85,11 +103,12 @@ export function NFTMintDialog({
   const [description, setDescription] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  // Custom parameters
-  const [price, setPrice] = useState<string>("10");
-  const [stableCoin, setStableCoin] = useState<StableCoin>(
-    "usdc" as StableCoin,
-  );
+  // Pricing
+  const [usdPrice, setUsdPrice] = useState<string>("10");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [icpRate, setIcpRate] = useState<number | null>(null);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+
   const [royaltyPercentage, setRoyaltyPercentage] = useState<number>(10);
   const [revenueSplits, setRevenueSplits] = useState<
     Array<{ address: string; percentage: string }>
@@ -97,46 +116,62 @@ export function NFTMintDialog({
     { address: identity?.getPrincipal().toString() || "", percentage: "100" },
   ]);
 
+  const loadICPRate = useCallback(async () => {
+    setIsFetchingRate(true);
+    const rate = await fetchICPPriceUSD();
+    setIcpRate(rate);
+    setIsFetchingRate(false);
+  }, []);
+
+  // Fetch ICP rate when dialog opens or when ICP is selected
+  useEffect(() => {
+    if (open) loadICPRate();
+  }, [open, loadICPRate]);
+
+  const icpEquivalent =
+    icpRate &&
+    usdPrice &&
+    !Number.isNaN(Number(usdPrice)) &&
+    Number(usdPrice) > 0
+      ? (Number(usdPrice) / icpRate).toFixed(4)
+      : null;
+
   const handleMint = async () => {
-    if (!title.trim() || !artist.trim() || !description.trim()) {
-      return;
-    }
+    if (!title.trim() || !artist.trim() || !description.trim()) return;
+    if (!paymentMethod) return;
 
-    // Validate price
-    const priceNum = Number.parseFloat(price);
-    if (Number.isNaN(priceNum) || priceNum <= 0) {
-      return;
-    }
+    const priceNum = Number.parseFloat(usdPrice);
+    if (Number.isNaN(priceNum) || priceNum <= 0) return;
 
-    // Validate revenue splits
     const totalPercentage = revenueSplits.reduce((sum, split) => {
       const pct = Number.parseFloat(split.percentage);
       return sum + (Number.isNaN(pct) ? 0 : pct);
     }, 0);
+    if (Math.abs(totalPercentage - 100) > 0.01) return;
 
-    if (Math.abs(totalPercentage - 100) > 0.01) {
-      return;
-    }
-
-    // Convert revenue splits to backend format
     const revenueSplitsFormatted: RevenueSplit[] = revenueSplits
       .filter((split) => split.address.trim() !== "")
       .map((split) => ({
-        address: split.address.trim() as any, // Will be converted to Principal by backend
+        address: split.address.trim() as any,
         percentage: BigInt(Math.round(Number.parseFloat(split.percentage))),
       }));
+    if (revenueSplitsFormatted.length === 0) return;
 
-    if (revenueSplitsFormatted.length === 0) {
-      return;
-    }
+    // For ICP payments, store the ICP equivalent price; otherwise store USD price
+    const effectivePrice =
+      paymentMethod === "icp" && icpEquivalent
+        ? Number.parseFloat(icpEquivalent)
+        : priceNum;
 
     await onMint({
       title: title.trim(),
       description: description.trim(),
       artist: artist.trim(),
       fileType: mintType,
-      price: priceNum,
-      stableCoin,
+      price: effectivePrice,
+      stableCoin: (paymentMethod === "icp"
+        ? "usdc"
+        : paymentMethod) as StableCoin,
       royaltyPercentage,
       revenueSplits: revenueSplitsFormatted,
     });
@@ -168,6 +203,10 @@ export function NFTMintDialog({
   }, 0);
 
   const isValidPercentage = Math.abs(totalPercentage - 100) < 0.01;
+
+  const selectedPayment = PAYMENT_OPTIONS.find(
+    (o) => o.value === paymentMethod,
+  );
 
   const getMintTypeLabel = (type: FileType) => {
     switch (type) {
@@ -209,15 +248,21 @@ export function NFTMintDialog({
     return false;
   };
 
-  const selectedStableCoin = STABLECOIN_OPTIONS.find(
-    (opt) => opt.value === stableCoin,
-  );
-
   const mintButtonLabel = () => {
     if (isLoading) return null;
     if (editionType === "1of1") return "Mint 1 of 1";
     return `Mint Collection (${editionCount})`;
   };
+
+  const canSubmit =
+    !isLoading &&
+    title.trim() !== "" &&
+    artist.trim() !== "" &&
+    description.trim() !== "" &&
+    paymentMethod !== "" &&
+    isValidPercentage &&
+    Number.parseFloat(usdPrice) > 0 &&
+    revenueSplits.every((s) => s.address.trim() !== "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -228,8 +273,7 @@ export function NFTMintDialog({
             Mint NFT with Custom Parameters
           </DialogTitle>
           <DialogDescription>
-            Create an NFT with custom pricing, royalties, and revenue splits
-            using stablecoin payments.
+            Create an NFT with custom pricing, royalties, and revenue splits.
           </DialogDescription>
         </DialogHeader>
 
@@ -330,7 +374,6 @@ export function NFTMintDialog({
                 collection.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                {/* 1 of 1 Card */}
                 <button
                   type="button"
                   data-ocid="nft.edition_type.1of1.radio"
@@ -364,7 +407,6 @@ export function NFTMintDialog({
                   </div>
                 </button>
 
-                {/* Collection Card */}
                 <button
                   type="button"
                   data-ocid="nft.edition_type.collection.radio"
@@ -399,7 +441,6 @@ export function NFTMintDialog({
                 </button>
               </div>
 
-              {/* Edition Count — shown only for Collection */}
               {editionType === "collection" && (
                 <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <Label htmlFor="edition-count" className="font-medium">
@@ -419,9 +460,8 @@ export function NFTMintDialog({
                     value={editionCount}
                     onChange={(e) => {
                       const val = Number.parseInt(e.target.value, 10);
-                      if (!Number.isNaN(val)) {
+                      if (!Number.isNaN(val))
                         setEditionCount(Math.min(10000, Math.max(2, val)));
-                      }
                     }}
                     placeholder="10"
                     disabled={isLoading}
@@ -532,47 +572,122 @@ export function NFTMintDialog({
             <Separator />
 
             {/* Pricing & Payment */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
                 Pricing & Payment
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nft-price">Price *</Label>
+              {/* USD Price Input */}
+              <div className="space-y-2">
+                <Label htmlFor="nft-usd-price">Price (USD) *</Label>
+                <div className="relative max-w-[200px]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">
+                    $
+                  </span>
                   <Input
-                    id="nft-price"
+                    id="nft-usd-price"
+                    data-ocid="nft.usd_price.input"
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    value={usdPrice}
+                    onChange={(e) => setUsdPrice(e.target.value)}
                     placeholder="10.00"
                     disabled={isLoading}
+                    className="pl-7"
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Set your price in USD — it will be converted to the chosen
+                  payment token at mint time.
+                </p>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="stablecoin">Stablecoin *</Label>
-                  <Select
-                    value={stableCoin}
-                    onValueChange={(value) =>
-                      setStableCoin(value as StableCoin)
-                    }
+              {/* ICP Conversion Box — always visible */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">ICP Equivalent</span>
+                  <button
+                    type="button"
+                    data-ocid="nft.icp_rate.refresh_button"
+                    onClick={loadICPRate}
+                    disabled={isFetchingRate}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="Refresh ICP rate"
                   >
-                    <SelectTrigger id="stablecoin">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STABLECOIN_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${isFetchingRate ? "animate-spin" : ""}`}
+                    />
+                  </button>
                 </div>
+                {isFetchingRate ? (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Fetching
+                    live rate…
+                  </p>
+                ) : icpRate ? (
+                  <>
+                    <p className="text-lg font-semibold">
+                      {icpEquivalent ? `${icpEquivalent} ICP` : "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      1 ICP ≈ ${icpRate.toFixed(2)} USD (live rate)
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Rate unavailable — enter price manually if paying in ICP.
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Method Selection — no default */}
+              <div className="space-y-3">
+                <Label>Payment Method *</Label>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Select how buyers will pay for this NFT. No payment method is
+                  pre-selected.
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      data-ocid={`nft.payment.${option.value}.radio`}
+                      disabled={isLoading}
+                      onClick={() =>
+                        setPaymentMethod(option.value as PaymentMethod)
+                      }
+                      className={`flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition-all ${
+                        paymentMethod === option.value
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <div
+                        className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${
+                          paymentMethod === option.value
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground/40"
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">
+                          {option.symbol}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {option.isICP ? "Native ICP token" : "Stablecoin"}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {paymentMethod === "" && (
+                  <p className="text-xs text-amber-500">
+                    Please select a payment method to continue.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -590,7 +705,7 @@ export function NFTMintDialog({
                   className="py-4"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Royalty percentage for secondary sales (0-100%)
+                  Royalty percentage for secondary sales (0–100%)
                 </p>
               </div>
             </div>
@@ -722,9 +837,25 @@ export function NFTMintDialog({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price:</span>
+                  <span className="text-muted-foreground">USD Price:</span>
+                  <span className="font-medium">${usdPrice || "—"}</span>
+                </div>
+                {paymentMethod === "icp" && icpEquivalent && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      ICP Equivalent:
+                    </span>
+                    <span className="font-medium">{icpEquivalent} ICP</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Payment Method:</span>
                   <span className="font-medium">
-                    {price} {selectedStableCoin?.symbol}
+                    {selectedPayment ? (
+                      selectedPayment.symbol
+                    ) : (
+                      <span className="text-amber-500">Not selected</span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -735,12 +866,6 @@ export function NFTMintDialog({
                   <span className="text-muted-foreground">Revenue Splits:</span>
                   <span className="font-medium">
                     {revenueSplits.length} address(es)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Payment Method:</span>
-                  <span className="font-medium">
-                    ICRC-1 / ck{selectedStableCoin?.symbol}
                   </span>
                 </div>
               </CardContent>
@@ -756,18 +881,7 @@ export function NFTMintDialog({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleMint}
-            disabled={
-              isLoading ||
-              !title.trim() ||
-              !artist.trim() ||
-              !description.trim() ||
-              !isValidPercentage ||
-              Number.parseFloat(price) <= 0 ||
-              revenueSplits.some((s) => !s.address.trim())
-            }
-          >
+          <Button onClick={handleMint} disabled={!canSubmit}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
