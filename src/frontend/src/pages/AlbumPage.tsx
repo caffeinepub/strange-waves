@@ -122,7 +122,7 @@ function AudioVisualizer() {
   );
 }
 
-// ─── Featured Album Player ────────────────────────────────────────────────────
+// ─── Featured Album Player — reads state from global AudioPlayerContext ───────
 interface FeaturedPlayerProps {
   selectedTrack: AudioFile | null;
   trackIndex: number;
@@ -134,78 +134,39 @@ function FeaturedPlayer({
   trackIndex,
   totalTracks,
 }: FeaturedPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const [srcUrl, setSrcUrl] = useState<string | null>(null);
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.85);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSeeking, setIsSeeking] = useState(false);
-  const prevTrackIdRef = useRef<string | null>(null);
+  const {
+    isPlaying,
+    isLoading,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    coverImageUrl,
+    togglePlay,
+    seek,
+    setVolume,
+    toggleMute,
+  } = useAudioPlayer();
 
+  const [localVolume, setLocalVolume] = useState(volume);
+
+  // Keep local volume slider in sync with context
   useEffect(() => {
-    if (!selectedTrack) {
-      setSrcUrl(null);
-      setCoverUrl(null);
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
-      prevTrackIdRef.current = null;
-      return;
-    }
-    if (selectedTrack.id === prevTrackIdRef.current) return;
-    prevTrackIdRef.current = selectedTrack.id;
-    setIsLoading(true);
-    setCurrentTime(0);
-    setDuration(0);
-    setIsPlaying(false);
-    try {
-      setSrcUrl(selectedTrack.blob.getDirectURL());
-    } catch {
-      setIsLoading(false);
-    }
-    if (selectedTrack.coverImage) {
-      try {
-        setCoverUrl(selectedTrack.coverImage.getDirectURL());
-      } catch {
-        setCoverUrl(null);
-      }
-    } else {
-      setCoverUrl(null);
-    }
-  }, [selectedTrack]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-
-  const togglePlay = useCallback(() => {
-    if (!audioRef.current || !srcUrl) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-  }, [isPlaying, srcUrl]);
+    setLocalVolume(volume);
+  }, [volume]);
 
   const handleSeek = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!audioRef.current || !duration || !progressBarRef.current) return;
+      if (!duration || !progressBarRef.current) return;
       const rect = progressBarRef.current.getBoundingClientRect();
       const pct = Math.max(
         0,
         Math.min(1, (e.clientX - rect.left) / rect.width),
       );
-      audioRef.current.currentTime = pct * duration;
-      setCurrentTime(pct * duration);
+      seek(pct * duration);
     },
-    [duration],
+    [duration, seek],
   );
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -301,35 +262,6 @@ function FeaturedPlayer({
           "0 0 60px oklch(0.72 0.18 175 / 0.12), inset 0 1px 0 oklch(0.72 0.18 175 / 0.12)",
       }}
     >
-      {srcUrl && (
-        <audio
-          ref={audioRef}
-          src={srcUrl}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => {
-            setIsPlaying(false);
-            setCurrentTime(0);
-          }}
-          onTimeUpdate={() => {
-            if (!isSeeking && audioRef.current)
-              setCurrentTime(audioRef.current.currentTime);
-          }}
-          onLoadedMetadata={() => {
-            if (audioRef.current) {
-              setDuration(audioRef.current.duration);
-              setIsLoading(false);
-              audioRef.current.volume = isMuted ? 0 : volume;
-              audioRef.current.play().catch(() => {});
-            }
-          }}
-          onCanPlay={() => setIsLoading(false)}
-          onWaiting={() => setIsLoading(true)}
-        >
-          <track kind="captions" />
-        </audio>
-      )}
-
       <div className="flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
         <div
           className="flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden relative"
@@ -340,9 +272,9 @@ function FeaturedPlayer({
               : "0 4px 20px oklch(0 0 0 / 0.4)",
           }}
         >
-          {coverUrl ? (
+          {coverImageUrl ? (
             <img
-              src={coverUrl}
+              src={coverImageUrl}
               alt={`${selectedTrack.title} cover`}
               className="w-full h-full object-cover"
               style={{
@@ -427,8 +359,6 @@ function FeaturedPlayer({
                 if (e.key === "Enter" || e.key === " ")
                   handleSeek(e as unknown as React.MouseEvent<HTMLDivElement>);
               }}
-              onMouseDown={() => setIsSeeking(true)}
-              onMouseUp={() => setIsSeeking(false)}
               role="slider"
               tabIndex={0}
               aria-label="Seek audio"
@@ -468,7 +398,7 @@ function FeaturedPlayer({
             <button
               type="button"
               onClick={togglePlay}
-              disabled={isLoading && !srcUrl}
+              disabled={isLoading}
               data-ocid="album.player.button"
               className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
@@ -492,7 +422,7 @@ function FeaturedPlayer({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsMuted((m) => !m)}
+                onClick={toggleMute}
                 data-ocid="album.player.toggle"
                 className="p-2 rounded-lg transition-colors hover:opacity-80"
                 style={{
@@ -513,18 +443,18 @@ function FeaturedPlayer({
                 min={0}
                 max={1}
                 step={0.01}
-                value={isMuted ? 0 : volume}
+                value={isMuted ? 0 : localVolume}
                 onChange={(e) => {
                   const v = Number.parseFloat(e.target.value);
+                  setLocalVolume(v);
                   setVolume(v);
-                  if (isMuted && v > 0) setIsMuted(false);
                 }}
                 className="w-20 h-1.5 rounded-full appearance-none cursor-pointer"
                 style={{
                   accentColor: "oklch(0.72 0.18 175)",
                   background: `linear-gradient(to right, oklch(0.72 0.18 175) ${
-                    (isMuted ? 0 : volume) * 100
-                  }%, oklch(0.22 0.05 200) ${(isMuted ? 0 : volume) * 100}%)`,
+                    (isMuted ? 0 : localVolume) * 100
+                  }%, oklch(0.22 0.05 200) ${(isMuted ? 0 : localVolume) * 100}%)`,
                 }}
                 aria-label="Volume"
               />
@@ -545,74 +475,57 @@ function FeaturedPlayer({
   );
 }
 
-// ─── Inline mini TrackPlayer ──────────────────────────────────────────────────
+// ─── Inline mini TrackPlayer — delegates to global AudioPlayerContext ─────────
 function TrackPlayer({ file }: { file: AudioFile }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [srcUrl, setSrcUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    isLoading,
+    setTrack,
+    togglePlay,
+    seek,
+  } = useAudioPlayer();
 
-  const loadAndPlay = async () => {
-    if (!srcUrl) {
-      setLoading(true);
-      try {
-        setSrcUrl(file.blob.getDirectURL());
-      } catch {
-        setLoading(false);
-        return;
-      }
-      setLoading(false);
-    }
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
+  const isThisTrack =
+    currentTrack?.source === "local" && currentTrack.data.id === file.id;
+
+  const displayTime = isThisTrack ? currentTime : 0;
+  const displayDuration = isThisTrack ? duration : 0;
+  const displayPlaying = isThisTrack && isPlaying;
+  const displayLoading = isThisTrack && isLoading;
+
+  const progress =
+    displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0;
+
+  const handleClick = () => {
+    if (isThisTrack) {
+      togglePlay();
+    } else {
+      setTrack({ source: "local", data: file });
     }
   };
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
   return (
     <div className="flex items-center gap-2 w-full mt-2">
-      {srcUrl && (
-        <audio
-          ref={audioRef}
-          src={srcUrl}
-          onTimeUpdate={() => {
-            if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
-          }}
-          onLoadedMetadata={() => {
-            if (audioRef.current) setDuration(audioRef.current.duration);
-          }}
-          onEnded={() => setIsPlaying(false)}
-          onCanPlay={() => {
-            if (isPlaying && audioRef.current) audioRef.current.play();
-          }}
-        >
-          <track kind="captions" />
-        </audio>
-      )}
       <button
         type="button"
-        onClick={loadAndPlay}
-        disabled={loading}
+        onClick={handleClick}
+        disabled={displayLoading}
         className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
         style={{
           background:
             "linear-gradient(135deg, oklch(0.72 0.18 175), oklch(0.65 0.22 200))",
-          boxShadow: isPlaying ? "0 0 10px oklch(0.72 0.18 175 / 0.6)" : "none",
+          boxShadow: displayPlaying
+            ? "0 0 10px oklch(0.72 0.18 175 / 0.6)"
+            : "none",
         }}
-        aria-label={isPlaying ? "Pause" : "Play"}
+        aria-label={displayPlaying ? "Pause" : "Play"}
       >
-        {loading ? (
+        {displayLoading ? (
           <Loader2 className="h-3 w-3 text-black animate-spin" />
-        ) : isPlaying ? (
+        ) : displayPlaying ? (
           <Pause className="h-3 w-3 text-black" />
         ) : (
           <Play className="h-3 w-3 text-black ml-0.5" />
@@ -623,8 +536,10 @@ function TrackPlayer({ file }: { file: AudioFile }) {
           className="flex justify-between text-[10px] mb-0.5"
           style={{ color: "oklch(0.55 0.08 175)" }}
         >
-          <span>{formatTime(currentTime)}</span>
-          <span>{duration > 0 ? formatTime(duration) : "--:--"}</span>
+          <span>{formatTime(displayTime)}</span>
+          <span>
+            {displayDuration > 0 ? formatTime(displayDuration) : "--:--"}
+          </span>
         </div>
         <div
           className="w-full h-1 rounded-full overflow-hidden cursor-pointer"
@@ -633,23 +548,19 @@ function TrackPlayer({ file }: { file: AudioFile }) {
           tabIndex={0}
           aria-label="Seek"
           aria-valuemin={0}
-          aria-valuemax={duration || 100}
-          aria-valuenow={currentTime}
+          aria-valuemax={displayDuration || 100}
+          aria-valuenow={displayTime}
           onClick={(e) => {
-            if (!audioRef.current || !duration) return;
+            if (!isThisTrack || !displayDuration) return;
             const rect = e.currentTarget.getBoundingClientRect();
-            audioRef.current.currentTime =
-              ((e.clientX - rect.left) / rect.width) * duration;
+            const pct = (e.clientX - rect.left) / rect.width;
+            seek(pct * displayDuration);
           }}
           onKeyDown={(e) => {
-            if (!audioRef.current || !duration) return;
+            if (!isThisTrack || !displayDuration) return;
             if (e.key === "ArrowRight")
-              audioRef.current.currentTime = Math.min(
-                duration,
-                currentTime + 5,
-              );
-            if (e.key === "ArrowLeft")
-              audioRef.current.currentTime = Math.max(0, currentTime - 5);
+              seek(Math.min(displayDuration, displayTime + 5));
+            if (e.key === "ArrowLeft") seek(Math.max(0, displayTime - 5));
           }}
         >
           <div
@@ -1111,9 +1022,9 @@ export default function AlbumPage({
                       index={i}
                       isSelected={selectedTrack?.id === track.id}
                       isAuthenticated={isAuthenticated}
-                      onSelect={(track) => {
-                        setSelectedTrack(track);
-                        setGlobalTrack({ source: "local", data: track });
+                      onSelect={(t) => {
+                        setSelectedTrack(t);
+                        setGlobalTrack({ source: "local", data: t });
                       }}
                       onMint={(t) => {
                         setMintTrack(t);

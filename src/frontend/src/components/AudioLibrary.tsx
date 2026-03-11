@@ -15,6 +15,7 @@ import {
   useMintNFTWithParams,
   useSearchAudiusTracks,
 } from "../hooks/useQueries";
+import { MintSuccessBanner } from "./NFTMarketplaceActions";
 import { NFTMintDialog } from "./NFTMintDialog";
 import { PlaylistManager } from "./PlaylistManager";
 
@@ -30,6 +31,7 @@ export function AudioLibrary({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("playlists");
   const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
   const { data: localFiles = [], isLoading: isLoadingLocal } = useAudioFiles();
   // Only pass the query when on the audius tab and there's a search term; otherwise pass empty string
@@ -41,6 +43,9 @@ export function AudioLibrary({
   const [selectedFileForMint, setSelectedFileForMint] =
     useState<AudioFile | null>(null);
   const mintMutation = useMintNFTWithParams();
+  const [mintSuccessTokenId, setMintSuccessTokenId] = useState<bigint | null>(
+    null,
+  );
 
   const handleMintClick = (file: AudioFile) => {
     setSelectedFileForMint(file);
@@ -59,18 +64,14 @@ export function AudioLibrary({
   }) => {
     if (!selectedFileForMint) return;
 
-    await mintMutation.mutateAsync({
+    const tokenId = await mintMutation.mutateAsync({
       audioFile: selectedFileForMint,
       ...data,
     });
 
+    if (tokenId !== undefined) setMintSuccessTokenId(tokenId);
     setMintDialogOpen(false);
     setSelectedFileForMint(null);
-  };
-
-  const isOwner = (file: AudioFile) => {
-    if (!identity || !file.owner) return false;
-    return file.owner.toString() === identity.getPrincipal().toString();
   };
 
   const renderLocalFiles = () => {
@@ -124,7 +125,7 @@ export function AudioLibrary({
                     <h3 className="font-semibold text-sm line-clamp-1">
                       {file.title}
                     </h3>
-                    {identity && isOwner(file) && (
+                    {isAuthenticated && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -291,6 +292,13 @@ export function AudioLibrary({
           </Tabs>
         </CardContent>
       </Card>
+
+      {mintSuccessTokenId !== null && (
+        <MintSuccessBanner
+          tokenId={mintSuccessTokenId}
+          onDismiss={() => setMintSuccessTokenId(null)}
+        />
+      )}
 
       {selectedFileForMint && (
         <NFTMintDialog

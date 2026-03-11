@@ -99,6 +99,47 @@ export type MintNFTResponse = {
     __kind__: "unauthorized";
     unauthorized: null;
 };
+export type NFTTransferResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "notFound";
+    notFound: null;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: null;
+} | {
+    __kind__: "alreadyListed";
+    alreadyListed: null;
+};
+export type BuyNFTResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "notListed";
+    notListed: null;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: null;
+} | {
+    __kind__: "notFound";
+    notFound: null;
+} | {
+    __kind__: "cannotBuyOwn";
+    cannotBuyOwn: null;
+} | {
+    __kind__: "insufficientFunds";
+    insufficientFunds: null;
+};
+export interface NFTListing {
+    tokenId: bigint;
+    seller: Principal;
+    priceE8s: bigint;
+    listedAt: bigint;
+    title: string;
+    description: string;
+    fileType: { audio: null } | { image: null } | { combined: null };
+}
 export interface AudiusTrack {
     id: string;
     title: string;
@@ -210,4 +251,10 @@ export interface backendInterface {
     updatePlaylistTitle(id: string, newTitle: string): Promise<void>;
     uploadAudioFile(file: AudioFile): Promise<string>;
     uploadTrackWithAlbum(file: AudioFile, albumId: string | null): Promise<string>;
+    getListings(): Promise<Array<NFTListing>>;
+    listNFTForSale(tokenId: bigint, priceE8s: bigint): Promise<NFTTransferResult>;
+    delistNFT(tokenId: bigint): Promise<NFTTransferResult>;
+    buyNFT(tokenId: bigint): Promise<BuyNFTResult>;
+    ownerOf(tokenId: bigint): Promise<Principal | null>;
+    transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult>;
 }

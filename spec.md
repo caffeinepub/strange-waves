@@ -1,28 +1,33 @@
-# Strange Waves
+# Strange Waves — Step 3: Atomic ICP Ledger Payment for NFT Purchases
 
 ## Current State
-The `AudioPlayer` component is rendered inside `renderPage()` in `App.tsx`, which means it unmounts every time the user navigates to a different page. The selected audio state (`useSelectedAudio`) persists, but the player UI and audio element are torn down on each navigation, stopping playback.
+- Step 1 (on-chain DIP-721 ownership transfer, listing, marketplace logic) is complete.
+- Step 2 (typed frontend bindings, marketplace hooks) is complete.
+- `buyNFT(tokenId)` in the backend transfers NFT ownership to the caller but does NOT deduct or transfer any ICP payment.
+- The frontend `useBuyNFT` hook calls `buyNFT` and shows success without showing price or deducting funds.
+- `NFTListing` stores `priceE8s : bigint` already.
+- `BuyNFTResult` has variants: ok, notListed, unauthorized, notFound, cannotBuyOwn.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `AudioPlayerContext` — a React context that holds the current track (`CombinedAudio | null`), playback state (playing/paused, currentTime, duration, volume, muted), and control functions (play, pause, seek, setVolume, setTrack)
-- `useAudioPlayer` hook that consumes the context
-- `PersistentAudioPlayer` component — a fixed bottom bar player that renders outside `renderPage()` so it never unmounts during navigation. Shows track artwork, title, artist, progress bar, play/pause, volume controls.
-- `AudioPlayerProvider` wrapping the app at root level, managing the single `<audio>` element
+- Backend: `BuyNFTResult` new variant `insufficientFunds`.
+- Backend: Before transferring NFT ownership in `buyNFT`, make an inter-canister call to the ICP ledger canister (`ryjl3-tyaaa-aaaaa-aaaba-cai`) to transfer `priceE8s` in ICP e8s from the buyer (caller) to the seller (listing.seller). The ICP transfer fee is 10000 e8s. If the ledger transfer fails (e.g. insufficient funds), return `insufficientFunds` and do NOT transfer the NFT.
+- Backend: After successful ledger payment, transfer NFT ownership to buyer and remove the listing.
+- Frontend: Update `BuyNFTResult` type in `backend.d.ts` to add `insufficientFunds` variant.
+- Frontend: In `useBuyNFT` hook, handle `insufficientFunds` with a clear error message.
+- Frontend: In the MusicMints marketplace UI, show the ICP price of each listing prominently (convert e8s to ICP). Replace "Claim NFT" button label with "Buy for X ICP". Show a confirmation dialog before purchase that displays price and warns ICP will be deducted from wallet.
 
 ### Modify
-- `App.tsx` — wrap app in `AudioPlayerProvider`, move the persistent player bar outside `renderPage()` (placed between `<main>` and `<Footer>`), remove the inline `AudioPlayer` from the home page section (the persistent bar replaces it)
-- `AudioLibrary.tsx` and `AlbumPage.tsx` — update track selection to call `setTrack` from context instead of `setSelectedAudio`, so clicking a track anywhere starts the global player
-- Any other component that triggers audio playback — wire to the global context
+- Backend: `buyNFT` function upgraded to include ICP ledger transfer before ownership transfer.
+- Frontend: `MusicMints.tsx` marketplace view — update buy flow with price display and confirmation.
+- Frontend: `useQueries.ts` — update `useBuyNFT` error handling for `insufficientFunds`.
 
 ### Remove
-- The `selectedAudio` / `setSelectedAudio` usage from `App.tsx` home page section (replaced by context)
+- Nothing removed.
 
 ## Implementation Plan
-1. Create `src/frontend/src/contexts/AudioPlayerContext.tsx` with provider, context, and `useAudioPlayer` hook. The `<audio>` element lives inside the provider so it never unmounts.
-2. Create `src/frontend/src/components/PersistentAudioPlayer.tsx` — fixed bottom bar, only visible when a track is loaded.
-3. Update `App.tsx` to wrap with `AudioPlayerProvider`, render `<PersistentAudioPlayer>` between `<main>` and `<Footer>`, and remove the inline player from home page.
-4. Update `AudioLibrary.tsx` to use `useAudioPlayer().setTrack` when a track is selected.
-5. Update `AlbumPage.tsx` similarly.
-6. Validate (lint, typecheck, build).
+1. Regenerate Motoko backend with ICP ledger inter-canister call in `buyNFT` and `insufficientFunds` result variant.
+2. Update `backend.d.ts` to add `insufficientFunds` to `BuyNFTResult`.
+3. Update `useQueries.ts` `useBuyNFT` to handle the new variant.
+4. Update `MusicMints.tsx` marketplace to show ICP price per listing and confirmation dialog before purchase.

@@ -876,3 +876,107 @@ export function useAudiusTrendingTracks() {
     },
   });
 }
+
+// ===== NFT MARKETPLACE HOOKS =====
+
+export function useGetListings() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["nftListings"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getListings();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 30000,
+  });
+}
+
+export function useListNFTForSale() {
+  const { actor } = useActor();
+  const { isActorReady } = useActorReady();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      tokenId,
+      priceE8s,
+    }: { tokenId: bigint; priceE8s: bigint }) => {
+      if (!actor || !isActorReady) throw new Error("Actor not ready");
+      const result = await actor.listNFTForSale(tokenId, priceE8s);
+      if (result.__kind__ === "notFound") throw new Error("NFT not found");
+      if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
+      if (result.__kind__ === "alreadyListed")
+        throw new Error("Already listed");
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nftListings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["callerNFTRecordsWithParams"],
+      });
+      toast.success("NFT listed for sale!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to list NFT: ${error.message}`);
+    },
+  });
+}
+
+export function useDelistNFT() {
+  const { actor } = useActor();
+  const { isActorReady } = useActorReady();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (tokenId: bigint) => {
+      if (!actor || !isActorReady) throw new Error("Actor not ready");
+      const result = await actor.delistNFT(tokenId);
+      if (result.__kind__ === "notFound") throw new Error("NFT not found");
+      if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nftListings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["callerNFTRecordsWithParams"],
+      });
+      toast.success("NFT delisted successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delist NFT: ${error.message}`);
+    },
+  });
+}
+
+export function useBuyNFT() {
+  const { actor } = useActor();
+  const { isActorReady } = useActorReady();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (tokenId: bigint) => {
+      if (!actor || !isActorReady) throw new Error("Actor not ready");
+      const result = await actor.buyNFT(tokenId);
+      if (result.__kind__ === "notListed")
+        throw new Error("NFT is not listed for sale");
+      if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
+      if (result.__kind__ === "notFound") throw new Error("NFT not found");
+      if (result.__kind__ === "cannotBuyOwn")
+        throw new Error("You already own this NFT");
+      if (result.__kind__ === "insufficientFunds")
+        throw new Error(
+          "Insufficient ICP balance. Please fund your wallet before purchasing.",
+        );
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nftListings"] });
+      queryClient.invalidateQueries({
+        queryKey: ["callerNFTRecordsWithParams"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["nftRecordsWithParams"] });
+      toast.success("NFT ownership transferred on-chain!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to claim NFT: ${error.message}`);
+    },
+  });
+}

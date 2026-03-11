@@ -258,6 +258,47 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export type NFTTransferResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "notFound";
+    notFound: null;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: null;
+} | {
+    __kind__: "alreadyListed";
+    alreadyListed: null;
+};
+export type BuyNFTResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "notListed";
+    notListed: null;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: null;
+} | {
+    __kind__: "notFound";
+    notFound: null;
+} | {
+    __kind__: "cannotBuyOwn";
+    cannotBuyOwn: null;
+} | {
+    __kind__: "insufficientFunds";
+    insufficientFunds: null;
+};
+export interface NFTListing {
+    tokenId: bigint;
+    seller: Principal;
+    priceE8s: bigint;
+    listedAt: bigint;
+    title: string;
+    description: string;
+    fileType: { audio: null } | { image: null } | { combined: null };
+}
 export interface backendInterface {
     _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
     _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
@@ -303,6 +344,12 @@ export interface backendInterface {
     updatePlaylistTitle(id: string, newTitle: string): Promise<void>;
     uploadAudioFile(file: AudioFile): Promise<string>;
     uploadTrackWithAlbum(file: AudioFile, albumId: string | null): Promise<string>;
+    getListings(): Promise<Array<NFTListing>>;
+    listNFTForSale(tokenId: bigint, priceE8s: bigint): Promise<NFTTransferResult>;
+    delistNFT(tokenId: bigint): Promise<NFTTransferResult>;
+    buyNFT(tokenId: bigint): Promise<BuyNFTResult>;
+    ownerOf(tokenId: bigint): Promise<Principal | null>;
+    transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult>;
 }
 import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -922,6 +969,24 @@ export class Backend implements backendInterface {
             const result = await this.actor.uploadTrackWithAlbum(await to_candid_AudioFile_n58(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n62(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
+    }
+    async getListings(): Promise<Array<NFTListing>> {
+        return (this.actor as any).getListings();
+    }
+    async listNFTForSale(tokenId: bigint, priceE8s: bigint): Promise<NFTTransferResult> {
+        return (this.actor as any).listNFTForSale(tokenId, priceE8s);
+    }
+    async delistNFT(tokenId: bigint): Promise<NFTTransferResult> {
+        return (this.actor as any).delistNFT(tokenId);
+    }
+    async buyNFT(tokenId: bigint): Promise<BuyNFTResult> {
+        return (this.actor as any).buyNFT(tokenId);
+    }
+    async ownerOf(tokenId: bigint): Promise<Principal | null> {
+        return (this.actor as any).ownerOf(tokenId);
+    }
+    async transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult> {
+        return (this.actor as any).transferNFT(tokenId, to);
     }
 }
 async function from_candid_AudioFile_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFile): Promise<AudioFile> {

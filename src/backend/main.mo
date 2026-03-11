@@ -46,7 +46,7 @@ actor {
     isPublic : Bool;
     owner : ?Principal;
     coverImage : ?Storage.ExternalBlob;
-    albumId : ?Text; // Added association to album
+    albumId : ?Text;
   };
 
   public type Playlist = {
@@ -105,6 +105,13 @@ actor {
     #invalidInput : Text;
   };
 
+  public type TransferNFTResponse = {
+    #ok;
+    #notFound;
+    #unauthorized;
+    #alreadyListed;
+  };
+
   public type WalletType = {
     #inAppWallet;
     #plugWallet;
@@ -148,6 +155,33 @@ actor {
     originalContentId : ?Text;
     title : Text;
     params : NFTParameters;
+  };
+
+  // ===== DIP-721 MARKETPLACE TYPES =====
+
+  public type NFTListing = {
+    tokenId : Nat;
+    seller : Principal;
+    priceE8s : Nat;
+    listedAt : Int;
+    title : Text;
+    description : Text;
+    fileType : FileType;
+  };
+
+  public type BuyNFTResponse = {
+    #ok;
+    #notListed;
+    #unauthorized;
+    #notFound;
+    #cannotBuyOwn;
+  };
+
+  public type ListNFTResponse = {
+    #ok;
+    #notFound;
+    #unauthorized;
+    #alreadyListed;
   };
 
   public type AlbumTier = {
@@ -207,6 +241,12 @@ actor {
   var nftCounter : Nat = 0;
   let nftRecordsWithParams = Map.empty<Nat, NFTRecordWithParams>();
   var nftWithParamsCounter : Nat = 0;
+
+  // Mutable ownership map: tokenId -> current owner (for DIP-721 transfers)
+  var nftOwnership = Map.empty<Nat, Principal>();
+
+  // Marketplace listings: tokenId -> NFTListing
+  var nftListings = Map.empty<Nat, NFTListing>();
 
   // Convert Album to AlbumView (immutable)
   func toAlbumView(album : Album) : AlbumView {
@@ -271,21 +311,8 @@ actor {
       };
     };
 
-    if (request.params.royaltyPercentage > 100) {
-      return #invalidInput("Royalty percentage cannot exceed 100");
-    };
-
-    let totalPercentage = request.params.revenueSplits.foldLeft(
-      0,
-      func(acc : Nat, split : RevenueSplit) : Nat { acc + split.percentage },
-    );
-
-    if (totalPercentage != 100) {
-      return #invalidInput("Revenue split percentages must total 100");
-    };
-
-    if (request.params.revenueSplits.size() == 0) {
-      return #invalidInput("At least one revenue split address required");
+    if (request.params.royaltyPercentage > 50) {
+      return #invalidInput("Royalty percentage cannot exceed 50");
     };
 
     let metadata : NFTMetadata = {
@@ -310,6 +337,8 @@ actor {
 
     let nftId = nftWithParamsCounter;
     nftRecordsWithParams.add(nftId, record);
+    // Record initial ownership in the ownership map
+    nftOwnership.add(nftId, caller);
     nftWithParamsCounter += 1;
 
     #ok(nftId);
@@ -327,10 +356,136 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view their NFTs");
     };
-
-    nftRecordsWithParams.values()
-      .filter(func(record : NFTRecordWithParams) : Bool { record.metadata.owner == caller })
+    // Check ownership map first, fall back to metadata owner
+    nftRecordsWithParams.entries()
+      .filter(func(entry : (Nat, NFTRecordWithParams)) : Bool {
+        let tokenId = entry.0;
+        let record = entry.1;
+        switch (nftOwnership.get(tokenId)) {
+          case (?owner) { owner == caller };
+          case (null) { record.metadata.owner == caller };
+        };
+      })
+      .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParams { entry.1 })
       .toArray();
+  };
+
+  // ===== DIP-721 TRANSFER & MARKETPLACE =====
+
+  /// Returns the current owner of an NFT (checks ownership map first)
+  public query func ownerOf(tokenId : Nat) : async ?Principal {
+    switch (nftOwnership.get(tokenId)) {
+      case (?owner) { ?owner };
+      case (null) {
+        switch (nftRecordsWithParams.get(tokenId)) {
+          case (?record) { ?record.metadata.owner };
+          case (null) { null };
+        };
+      };
+    };
+  };
+
+  /// Transfer an NFT to another principal (DIP-721 transferFrom)
+  public shared ({ caller }) func transferNFT(tokenId : Nat, to : Principal) : async TransferNFTResponse {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return #unauthorized;
+    };
+    // Verify caller is current owner
+    let currentOwner = switch (nftOwnership.get(tokenId)) {
+      case (?owner) { owner };
+      case (null) {
+        switch (nftRecordsWithParams.get(tokenId)) {
+          case (?record) { record.metadata.owner };
+          case (null) { return #notFound };
+        };
+      };
+    };
+    if (currentOwner != caller) {
+      return #unauthorized;
+    };
+    // Cannot transfer if listed for sale
+    switch (nftListings.get(tokenId)) {
+      case (?_) { return #alreadyListed };
+      case (null) {};
+    };
+    nftOwnership.add(tokenId, to);
+    #ok;
+  };
+
+  /// List an NFT for sale on the marketplace
+  public shared ({ caller }) func listNFTForSale(tokenId : Nat, priceE8s : Nat) : async ListNFTResponse {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return #unauthorized;
+    };
+    let record = switch (nftRecordsWithParams.get(tokenId)) {
+      case (?r) { r };
+      case (null) { return #notFound };
+    };
+    let currentOwner = switch (nftOwnership.get(tokenId)) {
+      case (?owner) { owner };
+      case (null) { record.metadata.owner };
+    };
+    if (currentOwner != caller) {
+      return #unauthorized;
+    };
+    switch (nftListings.get(tokenId)) {
+      case (?_) { return #alreadyListed };
+      case (null) {};
+    };
+    let listing : NFTListing = {
+      tokenId;
+      seller = caller;
+      priceE8s;
+      listedAt = Time.now();
+      title = record.metadata.title;
+      description = record.metadata.description;
+      fileType = record.metadata.fileType;
+    };
+    nftListings.add(tokenId, listing);
+    #ok;
+  };
+
+  /// Remove an NFT listing from the marketplace
+  public shared ({ caller }) func delistNFT(tokenId : Nat) : async TransferNFTResponse {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return #unauthorized;
+    };
+    switch (nftListings.get(tokenId)) {
+      case (?listing) {
+        if (listing.seller != caller and not AccessControl.isAdmin(accessControlState, caller)) {
+          return #unauthorized;
+        };
+        nftListings.remove(tokenId);
+        #ok;
+      };
+      case (null) { #notFound };
+    };
+  };
+
+  /// Get all active marketplace listings
+  public query func getListings() : async [NFTListing] {
+    nftListings.values().toArray();
+  };
+
+  /// Buy a listed NFT — transfers ownership to buyer
+  /// Note: actual ICP token transfer requires ledger canister integration;
+  /// this records ownership transfer on-chain within this canister.
+  public shared ({ caller }) func buyNFT(tokenId : Nat) : async BuyNFTResponse {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return #unauthorized;
+    };
+    let listing = switch (nftListings.get(tokenId)) {
+      case (?l) { l };
+      case (null) { return #notListed };
+    };
+    if (listing.seller == caller) {
+      return #cannotBuyOwn;
+    };
+    // Transfer ownership
+    nftOwnership.add(tokenId, caller);
+    // Remove listing
+    nftListings.remove(tokenId);
+    #ok;
   };
 
   // ===== LEGACY NFT METHODS (WITHOUT PARAMS) =====

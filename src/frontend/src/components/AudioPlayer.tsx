@@ -12,122 +12,54 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
+import { useAudioPlayer } from "../contexts/AudioPlayerContext";
 import type { CombinedAudio } from "../hooks/useQueries";
-import { getAudiusStreamUrl } from "../lib/audiusApi";
 
 interface AudioPlayerProps {
   audio: CombinedAudio;
 }
 
 export function AudioPlayer({ audio }: AudioPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    coverImageUrl,
+    setTrack,
+    togglePlay,
+    seek,
+    setVolume,
+    toggleMute,
+  } = useAudioPlayer();
 
+  // Load this audio into the global player when the prop changes
   useEffect(() => {
-    let createdUrls: string[] = [];
+    setTrack(audio);
+  }, [audio, setTrack]);
 
-    const loadAudio = async () => {
-      if (audio.source === "local" || audio.source === "remote") {
-        const blob = await audio.data.blob.getBytes();
-        const url = URL.createObjectURL(
-          new Blob([blob], { type: "audio/mpeg" }),
-        );
-        createdUrls.push(url);
-        setAudioUrl(url);
+  const isThisTrackActive =
+    currentTrack !== null &&
+    ((currentTrack.source === "local" &&
+      audio.source === "local" &&
+      currentTrack.data.id === audio.data.id) ||
+      (currentTrack.source === "audius" &&
+        audio.source === "audius" &&
+        currentTrack.data.id === audio.data.id));
 
-        // Load cover image if available
-        if (audio.data.coverImage) {
-          try {
-            const imageBytes = await audio.data.coverImage.getBytes();
-            const imageBlob = new Blob([imageBytes], { type: "image/jpeg" });
-            const imageUrl = URL.createObjectURL(imageBlob);
-            createdUrls.push(imageUrl);
-            setCoverImageUrl(imageUrl);
-          } catch (error) {
-            console.error("Failed to load cover image:", error);
-            setCoverImageUrl(null);
-          }
-        } else {
-          setCoverImageUrl(null);
-        }
-        return;
-      }
-      if (audio.source === "audius") {
-        const url = getAudiusStreamUrl(audio.data.id);
-        setAudioUrl(url);
-        setCoverImageUrl(null);
-      }
-    };
-
-    loadAudio();
-    setIsPlaying(false);
-    setCurrentTime(0);
-
-    return () => {
-      for (const u of createdUrls) URL.revokeObjectURL(u);
-    };
-  }, [audio]);
-
-  useEffect(() => {
-    const audioElement = audioRef.current;
-    if (!audioElement) return;
-
-    const updateTime = () => setCurrentTime(audioElement.currentTime);
-    const updateDuration = () => setDuration(audioElement.duration);
-    const handleEnded = () => setIsPlaying(false);
-
-    audioElement.addEventListener("timeupdate", updateTime);
-    audioElement.addEventListener("loadedmetadata", updateDuration);
-    audioElement.addEventListener("ended", handleEnded);
-
-    return () => {
-      audioElement.removeEventListener("timeupdate", updateTime);
-      audioElement.removeEventListener("loadedmetadata", updateDuration);
-      audioElement.removeEventListener("ended", handleEnded);
-    };
-  }, []);
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
+  const displayTime = isThisTrackActive ? currentTime : 0;
+  const displayDuration = isThisTrackActive ? duration : 0;
+  const displayPlaying = isThisTrackActive && isPlaying;
 
   const handleSeek = (value: number[]) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = value[0];
-    setCurrentTime(value[0]);
+    if (isThisTrackActive) seek(value[0]);
   };
 
   const handleVolumeChange = (value: number[]) => {
-    if (!audioRef.current) return;
-    const newVolume = value[0];
-    audioRef.current.volume = newVolume;
-    setVolume(newVolume);
-    setIsMuted(newVolume === 0);
-  };
-
-  const toggleMute = () => {
-    if (!audioRef.current) return;
-    if (isMuted) {
-      audioRef.current.volume = volume || 0.5;
-      setIsMuted(false);
-    } else {
-      audioRef.current.volume = 0;
-      setIsMuted(true);
-    }
+    setVolume(value[0]);
   };
 
   const formatTime = (time: number) => {
@@ -149,10 +81,7 @@ export function AudioPlayer({ audio }: AudioPlayerProps) {
     return "Local";
   };
 
-  const getTitle = () => {
-    if (audio.source === "audius") return audio.data.title;
-    return audio.data.title;
-  };
+  const getTitle = () => audio.data.title;
 
   const getArtist = () => {
     if (audio.source === "audius") return audio.data.user.name;
@@ -163,12 +92,7 @@ export function AudioPlayer({ audio }: AudioPlayerProps) {
     if (audio.source === "audius" && audio.data.artwork?.["480x480"]) {
       return audio.data.artwork["480x480"];
     }
-    if (
-      (audio.source === "local" || audio.source === "remote") &&
-      coverImageUrl
-    ) {
-      return coverImageUrl;
-    }
+    if (isThisTrackActive && coverImageUrl) return coverImageUrl;
     return null;
   };
 
@@ -218,15 +142,15 @@ export function AudioPlayer({ audio }: AudioPlayerProps) {
             {/* Progress Bar */}
             <div className="space-y-2">
               <Slider
-                value={[currentTime]}
-                max={duration || 100}
+                value={[displayTime]}
+                max={displayDuration || 100}
                 step={0.1}
                 onValueChange={handleSeek}
                 className="cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatTime(displayTime)}</span>
+                <span>{formatTime(displayDuration)}</span>
               </div>
             </div>
 
@@ -237,7 +161,7 @@ export function AudioPlayer({ audio }: AudioPlayerProps) {
                 onClick={togglePlay}
                 className="h-12 w-12 rounded-full"
               >
-                {isPlaying ? (
+                {displayPlaying ? (
                   <Pause className="h-5 w-5" />
                 ) : (
                   <Play className="h-5 w-5" />
@@ -268,9 +192,6 @@ export function AudioPlayer({ audio }: AudioPlayerProps) {
             </div>
           </div>
         </div>
-
-        {/* biome-ignore lint/a11y/useMediaCaption: audio player for music streaming, captions not applicable */}
-        <audio ref={audioRef} src={audioUrl} preload="metadata" />
       </CardContent>
     </Card>
   );

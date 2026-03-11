@@ -38,6 +38,7 @@ import {
   Package,
   RefreshCw,
   Send,
+  Tag,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -45,7 +46,15 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FileType } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useCallerNFTRecordsWithParams } from "../hooks/useQueries";
+import {
+  useCallerNFTRecordsWithParams,
+  useGetListings,
+} from "../hooks/useQueries";
+import {
+  DelistButton,
+  ListForSaleDialog,
+  ListingBadge,
+} from "./NFTMarketplaceActions";
 
 const ICP_LEDGER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 const ICP_INDEX_ID = "qhbym-qaaaa-aaaaa-aaaoq-cai";
@@ -210,6 +219,12 @@ export function WalletDisplay() {
   } = useCallerNFTRecordsWithParams();
 
   const walletAddress = identity?.getPrincipal().toString() || "";
+  const { data: listings = [] } = useGetListings();
+  const listedTokenIds = new Set(listings.map((l) => l.tokenId.toString()));
+  const [listForSaleState, setListForSaleState] = useState<{
+    tokenId: bigint;
+    title: string;
+  } | null>(null);
 
   const loadICPBalance = useCallback(async () => {
     if (!identity) return;
@@ -410,6 +425,10 @@ export function WalletDisplay() {
   ];
 
   const renderNFTCard = (nft: any, index: number) => {
+    const tokenId = BigInt(index);
+    const isListed = listedTokenIds.has(tokenId.toString());
+    const listingEntry = listings.find((l) => l.tokenId === tokenId);
+
     const fileTypeIcon =
       nft.metadata.fileType === FileType.audio ? (
         <Music className="h-4 w-4" />
@@ -447,11 +466,19 @@ export function WalletDisplay() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm line-clamp-1">
-                {nft.metadata.title}
-              </h4>
+              <div className="flex items-start justify-between gap-1">
+                <h4 className="font-semibold text-sm line-clamp-1">
+                  {nft.metadata.title}
+                </h4>
+                {isListed && listingEntry && (
+                  <ListingBadge priceE8s={listingEntry.priceE8s} />
+                )}
+              </div>
               <p className="text-xs text-muted-foreground line-clamp-1">
                 {nft.metadata.artist}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                Token #{index}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="secondary" className="text-xs">
@@ -460,6 +487,29 @@ export function WalletDisplay() {
                 <Badge variant="outline" className="text-xs">
                   ${(Number(nft.params.price) / 100).toFixed(2)}
                 </Badge>
+              </div>
+              <div className="mt-2">
+                {isListed ? (
+                  <DelistButton
+                    tokenId={tokenId}
+                    nftTitle={nft.metadata.title}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    data-ocid={`wallet.nft.list_for_sale.button.${index + 1}`}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                    onClick={() =>
+                      setListForSaleState({
+                        tokenId,
+                        title: nft.metadata.title,
+                      })
+                    }
+                  >
+                    <Tag className="h-3 w-3" />
+                    List for Sale
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1058,6 +1108,14 @@ export function WalletDisplay() {
           </Tabs>
         </CardContent>
       </Card>
+      {listForSaleState && (
+        <ListForSaleDialog
+          open={!!listForSaleState}
+          onOpenChange={(open) => !open && setListForSaleState(null)}
+          tokenId={listForSaleState.tokenId}
+          nftTitle={listForSaleState.title}
+        />
+      )}
     </>
   );
 }
