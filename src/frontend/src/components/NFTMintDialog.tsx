@@ -1,12 +1,6 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +24,10 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Crown,
   DollarSign,
   Image as ImageIcon,
+  Layers,
   Loader2,
   Music,
   Package,
@@ -45,6 +41,8 @@ import { useState } from "react";
 import type { AudioFile, RevenueSplit, StableCoin } from "../backend";
 import { FileType } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+
+type EditionType = "1of1" | "collection";
 
 interface NFTMintDialogProps {
   open: boolean;
@@ -80,6 +78,8 @@ export function NFTMintDialog({
 }: NFTMintDialogProps) {
   const { identity } = useInternetIdentity();
   const [mintType, setMintType] = useState<FileType>(FileType.combined);
+  const [editionType, setEditionType] = useState<EditionType>("1of1");
+  const [editionCount, setEditionCount] = useState<number>(10);
   const [title, setTitle] = useState(audioFile.title);
   const [artist, setArtist] = useState(audioFile.creator);
   const [description, setDescription] = useState("");
@@ -213,6 +213,12 @@ export function NFTMintDialog({
     (opt) => opt.value === stableCoin,
   );
 
+  const mintButtonLabel = () => {
+    if (isLoading) return null;
+    if (editionType === "1of1") return "Mint 1 of 1";
+    return `Mint Collection (${editionCount})`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
@@ -314,6 +320,115 @@ export function NFTMintDialog({
                   )}
                 </div>
               </RadioGroup>
+            </div>
+
+            {/* Edition Type Selection */}
+            <div className="space-y-3">
+              <Label>Edition Type *</Label>
+              <p className="text-xs text-muted-foreground -mt-1">
+                Choose whether this is a unique single edition or a limited
+                collection.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 1 of 1 Card */}
+                <button
+                  type="button"
+                  data-ocid="nft.edition_type.1of1.radio"
+                  className={`flex items-start gap-3 rounded-lg border p-4 transition-all text-left ${
+                    editionType === "1of1"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => setEditionType("1of1")}
+                  disabled={isLoading}
+                >
+                  <div
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                      editionType === "1of1"
+                        ? "border-primary"
+                        : "border-muted-foreground/40"
+                    }`}
+                  >
+                    {editionType === "1of1" && (
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">
+                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />1 of
+                      1
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      A unique, single-edition NFT. Only one will ever exist.
+                    </p>
+                  </div>
+                </button>
+
+                {/* Collection Card */}
+                <button
+                  type="button"
+                  data-ocid="nft.edition_type.collection.radio"
+                  className={`flex items-start gap-3 rounded-lg border p-4 transition-all text-left ${
+                    editionType === "collection"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => setEditionType("collection")}
+                  disabled={isLoading}
+                >
+                  <div
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                      editionType === "collection"
+                        ? "border-primary"
+                        : "border-muted-foreground/40"
+                    }`}
+                  >
+                    {editionType === "collection" && (
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">
+                      <Layers className="h-4 w-4 text-primary shrink-0" />
+                      Collection
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Mint multiple editions of this NFT.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Edition Count — shown only for Collection */}
+              {editionType === "collection" && (
+                <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <Label htmlFor="edition-count" className="font-medium">
+                    Number of Editions
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    How many copies of this NFT should exist in the collection?
+                    (Min 2, Max 10,000)
+                  </p>
+                  <Input
+                    id="edition-count"
+                    data-ocid="nft.edition_count.input"
+                    type="number"
+                    min={2}
+                    max={10000}
+                    step={1}
+                    value={editionCount}
+                    onChange={(e) => {
+                      const val = Number.parseInt(e.target.value, 10);
+                      if (!Number.isNaN(val)) {
+                        setEditionCount(Math.min(10000, Math.max(2, val)));
+                      }
+                    }}
+                    placeholder="10"
+                    disabled={isLoading}
+                    className="max-w-[160px]"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -592,6 +707,21 @@ export function NFTMintDialog({
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Edition:</span>
+                  <span className="font-medium flex items-center gap-1.5">
+                    {editionType === "1of1" ? (
+                      <>
+                        <Crown className="h-3.5 w-3.5 text-amber-500" />1 of 1
+                      </>
+                    ) : (
+                      <>
+                        <Layers className="h-3.5 w-3.5 text-primary" />
+                        {editionCount} copies
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Price:</span>
                   <span className="font-medium">
                     {price} {selectedStableCoin?.symbol}
@@ -646,7 +776,7 @@ export function NFTMintDialog({
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Mint NFT
+                {mintButtonLabel()}
               </>
             )}
           </Button>

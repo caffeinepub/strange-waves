@@ -20,33 +20,38 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { LoginButton } from "./LoginButton";
 import { ThemeToggle } from "./ThemeToggle";
 
-// Fallback uses the backend's actual ID (underscore, matching migration.mo)
+const EMPTY_TIER = {
+  name: "",
+  description: "",
+  supply: BigInt(0),
+  price: BigInt(0),
+};
+
 const SSCC_FALLBACK: AlbumView = {
   id: "sscc_collection",
   name: "SScc Collection",
   description: "",
   theme: "",
   trackIds: [],
-  listenerTier: {
-    name: "",
-    description: "",
-    supply: BigInt(0),
-    price: BigInt(0),
-  },
-  collectorTier: {
-    name: "",
-    description: "",
-    supply: BigInt(0),
-    price: BigInt(0),
-  },
-  investorTier: {
-    name: "",
-    description: "",
-    supply: BigInt(0),
-    price: BigInt(0),
-  },
+  listenerTier: EMPTY_TIER,
+  collectorTier: EMPTY_TIER,
+  investorTier: EMPTY_TIER,
   creationTimestamp: BigInt(0),
 };
+
+const KOTS_FALLBACK: AlbumView = {
+  id: "knight_of_the_soul",
+  name: "Knight of the Soul",
+  description: "",
+  theme: "",
+  trackIds: [],
+  listenerTier: EMPTY_TIER,
+  collectorTier: EMPTY_TIER,
+  investorTier: EMPTY_TIER,
+  creationTimestamp: BigInt(0),
+};
+
+const FALLBACK_ALBUMS = [SSCC_FALLBACK, KOTS_FALLBACK];
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -58,20 +63,34 @@ export function Header({ onNavigate }: HeaderProps) {
 
   const { data: albums, isLoading: albumsLoading } = useListAlbums();
 
-  // Sort albums so SScc Collection appears first; always show at least the fallback
+  // Merge backend albums with fallbacks, ensuring both known albums always appear
   const sortedAlbums: AlbumView[] = (() => {
-    const list = albums && albums.length > 0 ? [...albums] : [SSCC_FALLBACK];
-    // Ensure SScc Collection is first
-    const ssccIdx = list.findIndex(
-      (a) => a.id === "sscc_collection" || a.name === "SScc Collection",
-    );
-    if (ssccIdx > 0) {
-      const [sscc] = list.splice(ssccIdx, 1);
-      list.unshift(sscc);
-    } else if (ssccIdx === -1) {
+    const list: AlbumView[] = albums && albums.length > 0 ? [...albums] : [];
+
+    // Ensure SScc Collection is present
+    if (
+      !list.some(
+        (a) => a.id === "sscc_collection" || a.name === "SScc Collection",
+      )
+    ) {
       list.unshift(SSCC_FALLBACK);
     }
-    return list;
+
+    // Ensure Knight of the Soul is present
+    if (
+      !list.some(
+        (a) => a.id === "knight_of_the_soul" || a.name === "Knight of the Soul",
+      )
+    ) {
+      list.push(KOTS_FALLBACK);
+    }
+
+    // Sort: SScc first, then KOTS, then others
+    return list.sort((a, b) => {
+      const order = (x: AlbumView) =>
+        x.id === "sscc_collection" ? 0 : x.id === "knight_of_the_soul" ? 1 : 2;
+      return order(a) - order(b);
+    });
   })();
 
   const handleNavigate = (page: string) => {
@@ -122,21 +141,26 @@ export function Header({ onNavigate }: HeaderProps) {
               {/* Albums Sub-menu */}
               <DropdownMenuSeparator />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="flex items-center gap-2">
+                <DropdownMenuSubTrigger
+                  className="flex items-center gap-2"
+                  data-ocid="nav.albums.toggle"
+                >
                   <Disc3 className="h-4 w-4" />
                   <span>Albums</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-52">
                   {albumsLoading ? (
                     <>
-                      {/* Always show SScc Collection even while loading */}
-                      <DropdownMenuItem
-                        onClick={() => handleNavigate("album/sscc_collection")}
-                        className="flex items-center gap-2"
-                      >
-                        <Disc3 className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="truncate">SScc Collection</span>
-                      </DropdownMenuItem>
+                      {FALLBACK_ALBUMS.map((fa) => (
+                        <DropdownMenuItem
+                          key={fa.id}
+                          onClick={() => handleNavigate(`album/${fa.id}`)}
+                          className="flex items-center gap-2"
+                        >
+                          <Disc3 className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span className="truncate">{fa.name}</span>
+                        </DropdownMenuItem>
+                      ))}
                       <div className="p-2 space-y-1">
                         <Skeleton className="h-7 w-full" />
                       </div>
@@ -147,6 +171,7 @@ export function Header({ onNavigate }: HeaderProps) {
                         key={album.id}
                         onClick={() => handleNavigate(`album/${album.id}`)}
                         className="flex items-center gap-2"
+                        data-ocid={`nav.album.${album.id}.link`}
                       >
                         <Disc3 className="h-3.5 w-3.5 text-primary shrink-0" />
                         <span className="truncate">{album.name}</span>

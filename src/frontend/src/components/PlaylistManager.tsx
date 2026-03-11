@@ -43,18 +43,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronUp,
   Clock,
   Code,
   Copy,
   Edit,
+  Link,
   ListMusic,
   Loader2,
   MoreVertical,
   Music,
   Plus,
   Radio,
+  Share2,
   Trash2,
   Upload,
   X,
@@ -107,6 +111,9 @@ export function PlaylistManager({
   const [renameValue, setRenameValue] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePlaylistId, setDeletePlaylistId] = useState<string>("");
+  const [sortDialogOpen, setSortDialogOpen] = useState(false);
+  const [sortPlaylist, setSortPlaylist] = useState<PlaylistView | null>(null);
+  const [sortOrder, setSortOrder] = useState<string[]>([]);
 
   const { isActorReady, isActorInitializing } = useActorReady();
   const { identity } = useInternetIdentity();
@@ -295,6 +302,88 @@ export function PlaylistManager({
   const copyEmbedCode = () => {
     navigator.clipboard.writeText(embedCode);
     toast.success("Embed code copied to clipboard");
+  };
+
+  const handleSharePlaylist = (playlistId: string) => {
+    const url = `https://strange-waves-wvn.caffeine.xyz/?playlist=${playlistId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Share link copied!");
+  };
+
+  const openSortDialog = (playlist: PlaylistView) => {
+    const storageKey = `playlist-sort-${playlist.id}`;
+    const saved = localStorage.getItem(storageKey);
+    const allIds = [
+      ...playlist.trackIds.map((id) => ({ type: "local" as const, id })),
+      ...playlist.audiusTracks.map((t) => ({
+        type: "audius" as const,
+        id: t.id,
+      })),
+    ];
+    if (saved) {
+      try {
+        const savedOrder = JSON.parse(saved) as string[];
+        const orderedIds = savedOrder
+          .map((id) => allIds.find((item) => item.id === id))
+          .filter(Boolean) as typeof allIds;
+        const remaining = allIds.filter(
+          (item) => !savedOrder.includes(item.id),
+        );
+        setSortOrder([
+          ...orderedIds.map((i) => i.id),
+          ...remaining.map((i) => i.id),
+        ]);
+      } catch {
+        setSortOrder(allIds.map((i) => i.id));
+      }
+    } else {
+      setSortOrder(allIds.map((i) => i.id));
+    }
+    setSortPlaylist(playlist);
+    setSortDialogOpen(true);
+  };
+
+  const moveSortItem = (index: number, direction: "up" | "down") => {
+    setSortOrder((prev) => {
+      const next = [...prev];
+      const swapIdx = direction === "up" ? index - 1 : index + 1;
+      if (swapIdx < 0 || swapIdx >= next.length) return prev;
+      [next[index], next[swapIdx]] = [next[swapIdx], next[index]];
+      return next;
+    });
+  };
+
+  const saveSortOrder = () => {
+    if (!sortPlaylist) return;
+    localStorage.setItem(
+      `playlist-sort-${sortPlaylist.id}`,
+      JSON.stringify(sortOrder),
+    );
+    toast.success("Track order saved!");
+    setSortDialogOpen(false);
+  };
+
+  const _getSortedTracks = (playlist: PlaylistView) => {
+    const storageKey = `playlist-sort-${playlist.id}`;
+    const saved = localStorage.getItem(storageKey);
+    const allIds = [
+      ...playlist.trackIds.map((id) => ({ type: "local" as const, id })),
+      ...playlist.audiusTracks.map((t) => ({
+        type: "audius" as const,
+        id: t.id,
+      })),
+    ];
+    if (!saved) return allIds;
+    try {
+      const savedOrder = JSON.parse(saved) as string[];
+      const ordered = savedOrder
+        .map((id) => allIds.find((item) => item.id === id))
+        .filter(Boolean) as typeof allIds;
+      const remaining = allIds.filter((item) => !savedOrder.includes(item.id));
+      return [...ordered, ...remaining];
+    } catch {
+      return allIds;
+    }
   };
 
   const getAudioFileById = (id: string): AudioFile | undefined => {
@@ -693,6 +782,18 @@ export function PlaylistManager({
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              onClick={() => openSortDialog(playlist)}
+                            >
+                              <ArrowUp className="mr-2 h-4 w-4" />
+                              Sort Tracks
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleSharePlaylist(playlist.id)}
+                            >
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share Link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() =>
                                 handleGenerateEmbedCode(playlist.id)
                               }
@@ -1009,6 +1110,88 @@ export function PlaylistManager({
             <Button onClick={copyEmbedCode} className="gap-2">
               <Copy className="h-4 w-4" />
               Copy Code
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sort Tracks Dialog */}
+      <Dialog open={sortDialogOpen} onOpenChange={setSortDialogOpen}>
+        <DialogContent className="max-w-md" data-ocid="playlist.sort.dialog">
+          <DialogHeader>
+            <DialogTitle>Sort Tracks</DialogTitle>
+            <DialogDescription>
+              Drag or use the arrows to reorder tracks in &quot;
+              {sortPlaylist?.title}&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto space-y-1 py-2">
+            {sortPlaylist &&
+              sortOrder.map((trackId, idx) => {
+                const localFile = audioFiles.find((f) => f.id === trackId);
+                const audiusTrack = sortPlaylist.audiusTracks.find(
+                  (t) => t.id === trackId,
+                );
+                const title = localFile?.title ?? audiusTrack?.title ?? trackId;
+                const isAudius = !!audiusTrack;
+                return (
+                  <div
+                    key={trackId}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <span className="flex-1 text-sm truncate">
+                      {isAudius && (
+                        <Radio className="inline mr-1 h-3 w-3 opacity-60" />
+                      )}
+                      {title}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveSortItem(idx, "up")}
+                        disabled={idx === 0}
+                        data-ocid="playlist.sort.button"
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveSortItem(idx, "down")}
+                        disabled={idx === sortOrder.length - 1}
+                        data-ocid="playlist.sort.button"
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            {sortPlaylist && sortOrder.length === 0 && (
+              <p
+                className="text-sm text-muted-foreground text-center py-4"
+                data-ocid="playlist.sort.empty_state"
+              >
+                No tracks to sort.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSortDialogOpen(false)}
+              data-ocid="playlist.sort.cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveSortOrder}
+              data-ocid="playlist.sort.save_button"
+            >
+              Save Order
             </Button>
           </DialogFooter>
         </DialogContent>

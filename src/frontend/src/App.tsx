@@ -10,7 +10,6 @@ import { AudioUploader } from "./components/AudioUploader";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
-import { WalletDisplay } from "./components/WalletDisplay";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useSelectedAudio } from "./hooks/useQueries";
 import {
@@ -24,7 +23,6 @@ import { MusicMints } from "./pages/MusicMints";
 function App() {
   const [_appError, setAppError] = useState<Error | null>(null);
   const [isUploadExpanded, setIsUploadExpanded] = useState(false);
-  const [isEditExpanded, setIsEditExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState<string>("home");
 
   useEffect(() => {
@@ -161,38 +159,6 @@ function App() {
                 />
               </section>
             </ErrorBoundary>
-
-            {/* Edit Section - Collapsible at bottom */}
-            {isAuthenticated && (
-              <ErrorBoundary>
-                <section className="mb-12">
-                  <div className="space-y-4">
-                    <Button
-                      onClick={() => setIsEditExpanded(!isEditExpanded)}
-                      variant="outline"
-                      className="w-full flex items-center justify-between py-6 text-lg font-semibold"
-                    >
-                      <span>Edit &amp; Manage</span>
-                      {isEditExpanded ? (
-                        <ChevronUp className="h-5 w-5" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5" />
-                      )}
-                    </Button>
-
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isEditExpanded
-                          ? "max-h-[2000px] opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      <WalletDisplay />
-                    </div>
-                  </div>
-                </section>
-              </ErrorBoundary>
-            )}
 
             {/* Upload Section - Collapsible at bottom, only show when authenticated */}
             {isAuthenticated && (

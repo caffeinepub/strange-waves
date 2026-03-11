@@ -1,45 +1,124 @@
 import {
-  AlertCircle,
   ChevronDown,
   ChevronUp,
   Disc3,
-  Headphones,
   Loader2,
-  Maximize2,
   Music,
   Pause,
   Play,
   Radio,
-  Star,
-  TrendingUp,
   Volume2,
   VolumeX,
 } from "lucide-react";
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import type { AlbumView, AudioFile } from "../backend";
-import { FileType } from "../backend";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { AudioFile } from "../backend";
 import { NFTMintDialog } from "../components/NFTMintDialog";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useAudioFiles, useListAlbums, useMintNFT } from "../hooks/useQueries";
+import { useAudioFiles, useMintNFT } from "../hooks/useQueries";
 
 interface AlbumPageProps {
   albumId: string;
   onNavigate: (page: string) => void;
 }
 
-const SSCC_ABOUT = [
-  "SScc is the SteveStrange curator's cut into the exploration of pushing ai generated sounds with human curation to find the multi-dimensional realms the mind's hue of thought will discover when frequencies activate the dormant or the empowerment of being.",
-  "A comprehensive model of the structure of reality and identity, through which prior reality interpretations can be united within a greater picture of innerstanding.",
-  "Cosmic Structure, the context within which our evolution occurs and the hidden mechanics of evolution as being the process of dimensional ascension, through progressive cellular transmutation. The Anatomy of multi-dimensional identity and the krystal body, our personal, indelible connection to the Divine, and the point of union between science and spirituality. We have discovered our hidden evolutionary potential to reclaim our immortality and re-enter the cycles of higher evolution through methods of activation. Can we hear the frequency to explore some oscillation.",
-  "Beginning measures we can take, to prepare our bodies for the time it takes. Acceleration and continuum shift, while simultaneously improving our health, creating personal protection and accelerating the process of our self. Biological and spiritual evolution.",
-  "The choice belongs to each of us.",
-];
+interface AlbumStaticConfig {
+  displayTitle: string;
+  subtitle: string;
+  bannerSrc: string;
+  bannerAlt: string;
+  trackFilterKeyword: string;
+  about: string[];
+  emptyStateHint: string;
+}
+
+const ALBUM_CONFIGS: Record<string, AlbumStaticConfig> = {
+  sscc_collection: {
+    displayTitle: "SScc",
+    subtitle: "SteveStrange Curator's Cut",
+    bannerSrc: "/assets/SScc banner krystic world.jpg",
+    bannerAlt: "SScc Banner",
+    trackFilterKeyword: "sscc",
+    about: [
+      "SScc is the SteveStrange curator's cut into the exploration of pushing ai generated sounds with human curation to find the multi-dimensional realms the mind's hue of thought will discover when frequencies activate the dormant or the empowerment of being.",
+      "A comprehensive model of the structure of reality and identity, through which prior reality interpretations can be united within a greater picture of innerstanding.",
+      "Cosmic Structure, the context within which our evolution occurs and the hidden mechanics of evolution as being the process of dimensional ascension, through progressive cellular transmutation. The Anatomy of multi-dimensional identity and the krystal body, our personal, indelible connection to the Divine, and the point of union between science and spirituality. We have discovered our hidden evolutionary potential to reclaim our immortality and re-enter the cycles of higher evolution through methods of activation. Can we hear the frequency to explore some oscillation.",
+      "Beginning measures we can take, to prepare our bodies for the time it takes. Acceleration and continuum shift, while simultaneously improving our health, creating personal protection and accelerating the process of our self. Biological and spiritual evolution.",
+      "The choice belongs to each of us.",
+    ],
+    emptyStateHint:
+      'Upload tracks with "SScc" in the title from the main page to populate this collection.',
+  },
+  knight_of_the_soul: {
+    displayTitle: "Knight of the Soul",
+    subtitle: "SteveStrange",
+    bannerSrc: "",
+    bannerAlt: "Knight of the Soul Banner",
+    trackFilterKeyword: "knight of the soul",
+    about: [
+      "Knight of the Soul is a sonic journey into the depths of inner strength, resilience, and transcendence. This collection explores the intersection of human spirit and universal consciousness through sound.",
+      "Each track is a chapter in the story of the soul's passage — through challenge, transformation, and ultimately, illumination.",
+    ],
+    emptyStateHint:
+      'Upload tracks with "Knight of the Soul" in the title from the main page to populate this collection.',
+  },
+};
+
+function getAlbumConfig(albumId: string): AlbumStaticConfig {
+  const normalized = albumId.replace(/-/g, "_");
+  return ALBUM_CONFIGS[normalized] ?? ALBUM_CONFIGS.sscc_collection;
+}
 
 function formatTime(s: number): string {
   if (!Number.isFinite(s) || s < 0) return "0:00";
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
+// ─── Audio Visualizer Bars (CSS-only, decorative) ─────────────────────────────
+function AudioVisualizer() {
+  return (
+    <>
+      <style>{`
+        @keyframes bar-bounce-1 { 0%,100%{height:3px} 50%{height:13px} }
+        @keyframes bar-bounce-2 { 0%,100%{height:6px} 50%{height:20px} }
+        @keyframes bar-bounce-3 { 0%,100%{height:4px} 50%{height:17px} }
+        @keyframes bar-bounce-4 { 0%,100%{height:8px} 50%{height:22px} }
+        @keyframes bar-bounce-5 { 0%,100%{height:5px} 50%{height:15px} }
+        @keyframes bar-bounce-6 { 0%,100%{height:3px} 50%{height:18px} }
+        @keyframes bar-bounce-7 { 0%,100%{height:7px} 50%{height:12px} }
+      `}</style>
+      <div
+        className="flex items-end gap-[3px]"
+        style={{ height: "22px" }}
+        aria-hidden="true"
+      >
+        {[
+          { anim: "bar-bounce-1", dur: "0.55s" },
+          { anim: "bar-bounce-2", dur: "0.70s" },
+          { anim: "bar-bounce-3", dur: "0.45s" },
+          { anim: "bar-bounce-4", dur: "0.80s" },
+          { anim: "bar-bounce-5", dur: "0.60s" },
+          { anim: "bar-bounce-6", dur: "0.50s" },
+          { anim: "bar-bounce-7", dur: "0.75s" },
+        ].map(({ anim, dur }, idx) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: decorative bars have no identity
+            key={idx}
+            style={{
+              width: "3px",
+              borderRadius: "2px",
+              background: "oklch(0.72 0.18 175)",
+              animation: `${anim} ${dur} ease-in-out infinite`,
+              animationDelay: `${idx * 0.06}s`,
+              boxShadow: "0 0 4px oklch(0.72 0.18 175 / 0.8)",
+            }}
+          />
+        ))}
+      </div>
+    </>
+  );
 }
 
 // ─── Featured Album Player ────────────────────────────────────────────────────
@@ -67,7 +146,6 @@ function FeaturedPlayer({
   const [isSeeking, setIsSeeking] = useState(false);
   const prevTrackIdRef = useRef<string | null>(null);
 
-  // Load track whenever selectedTrack changes
   useEffect(() => {
     if (!selectedTrack) {
       setSrcUrl(null);
@@ -78,22 +156,17 @@ function FeaturedPlayer({
       prevTrackIdRef.current = null;
       return;
     }
-
     if (selectedTrack.id === prevTrackIdRef.current) return;
     prevTrackIdRef.current = selectedTrack.id;
-
     setIsLoading(true);
     setCurrentTime(0);
     setDuration(0);
     setIsPlaying(false);
-
     try {
-      const audioUrl = selectedTrack.blob.getDirectURL();
-      setSrcUrl(audioUrl);
+      setSrcUrl(selectedTrack.blob.getDirectURL());
     } catch {
       setIsLoading(false);
     }
-
     if (selectedTrack.coverImage) {
       try {
         setCoverUrl(selectedTrack.coverImage.getDirectURL());
@@ -105,7 +178,6 @@ function FeaturedPlayer({
     }
   }, [selectedTrack]);
 
-  // Apply volume/mute to audio element
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
@@ -138,7 +210,6 @@ function FeaturedPlayer({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   if (!selectedTrack) {
-    // Placeholder state
     return (
       <div
         data-ocid="album.player.card"
@@ -152,7 +223,6 @@ function FeaturedPlayer({
         }}
       >
         <div className="flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
-          {/* Artwork placeholder */}
           <div
             className="flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-xl flex items-center justify-center relative overflow-hidden"
             style={{
@@ -173,8 +243,6 @@ function FeaturedPlayer({
               style={{ color: "oklch(0.42 0.10 175)" }}
             />
           </div>
-
-          {/* Text + controls placeholder */}
           <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start gap-3 text-center sm:text-left">
             <div>
               <p
@@ -190,8 +258,6 @@ function FeaturedPlayer({
                 Choose from the collection below
               </p>
             </div>
-
-            {/* Inactive progress bar */}
             <div className="w-full max-w-xs sm:max-w-none">
               <div
                 className="flex justify-between text-xs mb-1.5"
@@ -205,8 +271,6 @@ function FeaturedPlayer({
                 style={{ background: "oklch(0.20 0.04 200)" }}
               />
             </div>
-
-            {/* Inactive controls */}
             <div className="flex items-center gap-3">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center opacity-30"
@@ -236,7 +300,6 @@ function FeaturedPlayer({
           "0 0 60px oklch(0.72 0.18 175 / 0.12), inset 0 1px 0 oklch(0.72 0.18 175 / 0.12)",
       }}
     >
-      {/* Hidden audio element */}
       {srcUrl && (
         <audio
           ref={audioRef}
@@ -267,7 +330,6 @@ function FeaturedPlayer({
       )}
 
       <div className="flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
-        {/* Cover artwork */}
         <div
           className="flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden relative"
           style={{
@@ -301,7 +363,6 @@ function FeaturedPlayer({
               />
             </div>
           )}
-          {/* Playing pulse ring */}
           {isPlaying && (
             <div
               className="absolute inset-0 rounded-xl pointer-events-none"
@@ -313,9 +374,7 @@ function FeaturedPlayer({
           )}
         </div>
 
-        {/* Track info + controls */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 w-full sm:w-auto">
-          {/* Track meta */}
           <div className="text-center sm:text-left">
             <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
               <span
@@ -357,7 +416,6 @@ function FeaturedPlayer({
             )}
           </div>
 
-          {/* Progress bar */}
           <div className="w-full">
             <div
               ref={progressBarRef}
@@ -378,7 +436,6 @@ function FeaturedPlayer({
               aria-valuenow={currentTime}
               data-ocid="album.player.canvas_target"
             >
-              {/* Fill */}
               <div
                 className="h-full rounded-full transition-all duration-100 relative"
                 style={{
@@ -387,7 +444,6 @@ function FeaturedPlayer({
                     "linear-gradient(90deg, oklch(0.72 0.18 175), oklch(0.80 0.20 145))",
                 }}
               >
-                {/* Thumb */}
                 <div
                   className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{
@@ -407,9 +463,7 @@ function FeaturedPlayer({
             </div>
           </div>
 
-          {/* Playback controls row */}
           <div className="flex items-center justify-between gap-2">
-            {/* Play / Pause */}
             <button
               type="button"
               onClick={togglePlay}
@@ -434,7 +488,6 @@ function FeaturedPlayer({
               )}
             </button>
 
-            {/* Volume control */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -468,13 +521,14 @@ function FeaturedPlayer({
                 className="w-20 h-1.5 rounded-full appearance-none cursor-pointer"
                 style={{
                   accentColor: "oklch(0.72 0.18 175)",
-                  background: `linear-gradient(to right, oklch(0.72 0.18 175) ${(isMuted ? 0 : volume) * 100}%, oklch(0.22 0.05 200) ${(isMuted ? 0 : volume) * 100}%)`,
+                  background: `linear-gradient(to right, oklch(0.72 0.18 175) ${
+                    (isMuted ? 0 : volume) * 100
+                  }%, oklch(0.22 0.05 200) ${(isMuted ? 0 : volume) * 100}%)`,
                 }}
                 aria-label="Volume"
               />
             </div>
 
-            {/* Track size info */}
             {selectedTrack.size > 0 && (
               <span
                 className="text-xs hidden sm:block"
@@ -503,8 +557,7 @@ function TrackPlayer({ file }: { file: AudioFile }) {
     if (!srcUrl) {
       setLoading(true);
       try {
-        const url = file.blob.getDirectURL();
-        setSrcUrl(url);
+        setSrcUrl(file.blob.getDirectURL());
       } catch {
         setLoading(false);
         return;
@@ -522,25 +575,21 @@ function TrackPlayer({ file }: { file: AudioFile }) {
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
-  };
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) setDuration(audioRef.current.duration);
-  };
-  const handleEnded = () => setIsPlaying(false);
-
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div className="flex items-center gap-2 w-full mt-2">
       {srcUrl && (
         <audio
           ref={audioRef}
           src={srcUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
+          onTimeUpdate={() => {
+            if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+          }}
+          onLoadedMetadata={() => {
+            if (audioRef.current) setDuration(audioRef.current.duration);
+          }}
+          onEnded={() => setIsPlaying(false)}
           onCanPlay={() => {
             if (isPlaying && audioRef.current) audioRef.current.play();
           }}
@@ -552,25 +601,26 @@ function TrackPlayer({ file }: { file: AudioFile }) {
         type="button"
         onClick={loadAndPlay}
         disabled={loading}
-        className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200"
+        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
         style={{
           background:
             "linear-gradient(135deg, oklch(0.72 0.18 175), oklch(0.65 0.22 200))",
-          boxShadow: isPlaying ? "0 0 12px oklch(0.72 0.18 175 / 0.6)" : "none",
+          boxShadow: isPlaying ? "0 0 10px oklch(0.72 0.18 175 / 0.6)" : "none",
         }}
+        aria-label={isPlaying ? "Pause" : "Play"}
       >
         {loading ? (
-          <Loader2 className="h-4 w-4 text-white animate-spin" />
+          <Loader2 className="h-3 w-3 text-black animate-spin" />
         ) : isPlaying ? (
-          <Pause className="h-4 w-4 text-white" />
+          <Pause className="h-3 w-3 text-black" />
         ) : (
-          <Play className="h-4 w-4 text-white ml-0.5" />
+          <Play className="h-3 w-3 text-black ml-0.5" />
         )}
       </button>
       <div className="flex-1 min-w-0">
         <div
-          className="flex justify-between text-xs mb-1"
-          style={{ color: "oklch(0.70 0.08 175)" }}
+          className="flex justify-between text-[10px] mb-0.5"
+          style={{ color: "oklch(0.55 0.08 175)" }}
         >
           <span>{formatTime(currentTime)}</span>
           <span>{duration > 0 ? formatTime(duration) : "--:--"}</span>
@@ -587,9 +637,8 @@ function TrackPlayer({ file }: { file: AudioFile }) {
           onClick={(e) => {
             if (!audioRef.current || !duration) return;
             const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const pct = x / rect.width;
-            audioRef.current.currentTime = pct * duration;
+            audioRef.current.currentTime =
+              ((e.clientX - rect.left) / rect.width) * duration;
           }}
           onKeyDown={(e) => {
             if (!audioRef.current || !duration) return;
@@ -616,154 +665,232 @@ function TrackPlayer({ file }: { file: AudioFile }) {
   );
 }
 
+// ─── Track Card (horizontal carousel item) ───────────────────────────────────
+interface TrackCardProps {
+  track: AudioFile;
+  index: number;
+  isSelected: boolean;
+  isAuthenticated: boolean;
+  onSelect: (track: AudioFile) => void;
+  onMint: (track: AudioFile) => void;
+}
+
+function TrackCard({
+  track,
+  index,
+  isSelected,
+  isAuthenticated,
+  onSelect,
+  onMint,
+}: TrackCardProps) {
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (track.coverImage) {
+      try {
+        setCoverUrl(track.coverImage.getDirectURL());
+      } catch {
+        setCoverUrl(null);
+      }
+    }
+  }, [track.coverImage]);
+
+  return (
+    <li
+      data-ocid={`album.collection.item.${index + 1}`}
+      className="flex-shrink-0 flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
+      style={{
+        width: "168px",
+        scrollSnapAlign: "start",
+        background: isSelected
+          ? "oklch(0.18 0.08 175 / 0.6)"
+          : "oklch(0.16 0.05 200)",
+        border: isSelected
+          ? "1px solid oklch(0.72 0.18 175 / 0.6)"
+          : "1px solid oklch(0.24 0.06 175 / 0.3)",
+        boxShadow: isSelected
+          ? "0 0 24px oklch(0.72 0.18 175 / 0.25), 0 4px 16px oklch(0 0 0 / 0.4)"
+          : "0 4px 12px oklch(0 0 0 / 0.3)",
+      }}
+    >
+      {/* Cover art */}
+      <button
+        type="button"
+        onClick={() => onSelect(track)}
+        data-ocid={`album.collection.button.${index + 1}`}
+        aria-label={`Load ${track.title} in player`}
+        className="relative w-full flex-shrink-0 overflow-hidden group"
+        style={{ height: "168px" }}
+      >
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={`${track.title} cover`}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{
+              background: isSelected
+                ? "linear-gradient(135deg, oklch(0.22 0.12 175), oklch(0.17 0.09 200))"
+                : "linear-gradient(135deg, oklch(0.18 0.08 175), oklch(0.14 0.06 200))",
+            }}
+          >
+            <Music
+              className="h-10 w-10 opacity-40"
+              style={{ color: "oklch(0.72 0.18 175)" }}
+            />
+            <span
+              className="absolute bottom-2 left-2 text-xs font-bold"
+              style={{ color: "oklch(0.45 0.10 175)" }}
+            >
+              #{index + 1}
+            </span>
+          </div>
+        )}
+
+        {/* Hover overlay with play icon */}
+        <div
+          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          style={{ background: "oklch(0 0 0 / 0.45)" }}
+        >
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{
+              background: "oklch(0.72 0.18 175 / 0.9)",
+              boxShadow: "0 0 20px oklch(0.72 0.18 175 / 0.6)",
+            }}
+          >
+            <Play className="h-4 w-4 text-black ml-0.5" />
+          </div>
+        </div>
+
+        {/* Audio visualizer (only when selected) */}
+        {isSelected && (
+          <div
+            className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-2"
+            style={{
+              background:
+                "linear-gradient(to top, oklch(0 0 0 / 0.65), transparent)",
+            }}
+          >
+            <AudioVisualizer />
+          </div>
+        )}
+
+        {/* "Now Playing" glow ring when selected */}
+        {isSelected && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              border: "2px solid oklch(0.72 0.18 175 / 0.5)",
+              animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            }}
+          />
+        )}
+      </button>
+
+      {/* Card body */}
+      <div className="flex flex-col flex-1 p-3 gap-1">
+        {/* Track title */}
+        <button
+          type="button"
+          onClick={() => onSelect(track)}
+          className="text-left w-full group/title"
+          aria-label={`Select ${track.title}`}
+        >
+          <p
+            className="text-xs font-semibold truncate leading-tight group-hover/title:opacity-80 transition-opacity"
+            style={{
+              color: isSelected
+                ? "oklch(0.92 0.10 175)"
+                : "oklch(0.85 0.06 175)",
+            }}
+          >
+            {track.title}
+          </p>
+          {track.creator && (
+            <p
+              className="text-[10px] mt-0.5 truncate"
+              style={{ color: "oklch(0.50 0.08 175)" }}
+            >
+              {track.creator}
+            </p>
+          )}
+        </button>
+
+        {/* Mini player */}
+        <TrackPlayer file={track} />
+
+        {/* Mint NFT icon button (authenticated only) */}
+        {isAuthenticated && (
+          <div className="flex justify-end mt-1">
+            <button
+              type="button"
+              data-ocid={`album.track.button.${index + 1}`}
+              onClick={() => onMint(track)}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold tracking-wide transition-all duration-200 hover:opacity-90 active:scale-95"
+              style={{
+                background: "oklch(0.78 0.20 145 / 0.14)",
+                color: "oklch(0.78 0.20 145)",
+                border: "1px solid oklch(0.78 0.20 145 / 0.35)",
+              }}
+              aria-label={`Mint NFT for ${track.title}`}
+            >
+              <Disc3 className="h-2.5 w-2.5" />
+              <span>Mint</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
 // ─── Main AlbumPage ───────────────────────────────────────────────────────────
-export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
+export default function AlbumPage({
+  albumId,
+  onNavigate: _onNavigate,
+}: AlbumPageProps) {
   const [bannerError, setBannerError] = useState(false);
   const [aboutExpanded, setAboutExpanded] = useState(true);
   const [selectedTrack, setSelectedTrack] = useState<AudioFile | null>(null);
   const [mintTrack, setMintTrack] = useState<AudioFile | null>(null);
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
 
-  const { data: albums = [], isLoading, isError } = useListAlbums();
   const { identity } = useInternetIdentity();
   const mintMutation = useMintNFT();
 
-  const albumData: AlbumView | undefined = React.useMemo(() => {
-    if (!albums.length) return undefined;
-    let found = albums.find((a) => a.id === albumId);
-    if (found) return found;
-    const normId = albumId.replace(/-/g, "_");
-    found = albums.find(
-      (a) => a.id === normId || a.id.replace(/-/g, "_") === normId,
-    );
-    if (found) return found;
-    found = albums.find(
-      (a) =>
-        a.name.toLowerCase().replace(/\s+/g, "-") === albumId ||
-        a.name.toLowerCase().replace(/\s+/g, "_") === albumId,
-    );
-    if (found) return found;
-    found = albums.find((a) => a.name === "SScc Collection");
-    return found;
-  }, [albums, albumId]);
-
-  const { data: allTracks = [] } = useAudioFiles();
-
-  // Filter to only SScc-titled tracks for the collection section
-  const ssccTracks = allTracks.filter((t) =>
-    t.title.toLowerCase().includes("sscc"),
+  // Tracks load independently — page shell always renders regardless
+  const { data: allTracks = [], isLoading: tracksLoading } = useAudioFiles();
+  const albumConfig = getAlbumConfig(albumId);
+  const albumTracks = allTracks.filter((t) =>
+    t.title
+      .toLowerCase()
+      .includes(albumConfig.trackFilterKeyword.toLowerCase()),
   );
-
-  // Show the upload button as soon as the user is signed in with a non-anonymous
-  // principal. The backend upload mutation enforces admin-only access and will
-  // return an error if the caller is not actually an admin.
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
-  const tierConfig = [
-    {
-      tier: albumData?.listenerTier,
-      icon: <Headphones className="h-5 w-5" />,
-      gradient:
-        "linear-gradient(135deg, oklch(0.20 0.06 200), oklch(0.16 0.04 175))",
-      accentColor: "oklch(0.72 0.18 175)",
-      glowColor: "oklch(0.72 0.18 175 / 0.25)",
-      label: "Listener",
-      desc: "Entry-level access to the SScc frequency collection.",
-    },
-    {
-      tier: albumData?.collectorTier,
-      icon: <Star className="h-5 w-5" />,
-      gradient:
-        "linear-gradient(135deg, oklch(0.20 0.08 220), oklch(0.16 0.06 200))",
-      accentColor: "oklch(0.78 0.20 145)",
-      glowColor: "oklch(0.78 0.20 145 / 0.25)",
-      label: "Collector",
-      desc: "Collectible ownership rights and deeper connection to the project.",
-    },
-    {
-      tier: albumData?.investorTier,
-      icon: <TrendingUp className="h-5 w-5" />,
-      gradient:
-        "linear-gradient(135deg, oklch(0.20 0.10 30), oklch(0.16 0.08 10))",
-      accentColor: "oklch(0.78 0.18 45)",
-      glowColor: "oklch(0.78 0.18 45 / 0.25)",
-      label: "Investor",
-      desc: "Top-tier stake in the project with revenue participation.",
-    },
-  ];
-
-  // selectedTrackIndex uses ssccTracks so the "X / Y" counter in the featured
-  // player reflects the SScc collection size, not the full library.
   const selectedTrackIndex = selectedTrack
-    ? ssccTracks.findIndex((t) => t.id === selectedTrack.id)
+    ? albumTracks.findIndex((t) => t.id === selectedTrack.id)
     : -1;
 
-  // ── Loading ──────────────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center min-h-[60vh] gap-4"
-        style={{ background: "oklch(0.10 0.04 200)" }}
-      >
-        <div
-          className="animate-spin rounded-full h-10 w-10 border-b-2"
-          style={{ borderColor: "oklch(0.72 0.18 175)" }}
-        />
-        <p className="text-sm" style={{ color: "oklch(0.55 0.10 175)" }}>
-          Loading album…
-        </p>
-      </div>
-    );
-  }
-
-  // ── Error ────────────────────────────────────────────────────────────────
-  if (isError) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4"
-        style={{ background: "oklch(0.10 0.04 200)" }}
-      >
-        <AlertCircle
-          className="h-12 w-12"
-          style={{ color: "oklch(0.62 0.24 25)" }}
-        />
-        <h2
-          className="text-xl font-semibold"
-          style={{ color: "oklch(0.90 0.04 175)" }}
-        >
-          Failed to load album
-        </h2>
-        <button
-          type="button"
-          onClick={() => onNavigate("home")}
-          className="px-4 py-2 rounded-md text-sm transition-opacity hover:opacity-90"
-          style={{
-            background: "oklch(0.72 0.18 175)",
-            color: "oklch(0.10 0.04 200)",
-          }}
-        >
-          Go Home
-        </button>
-      </div>
-    );
-  }
-
-  // ── Main render ──────────────────────────────────────────────────────────
   return (
     <>
       <div
         className="min-h-screen"
         style={{ background: "oklch(0.10 0.04 200)" }}
       >
-        {/* ── Hero Banner ─────────────────────────────────────────────────── */}
+        {/* Hero Banner */}
         <div
           className="relative w-full overflow-hidden"
           style={{ height: "clamp(220px, 40vw, 480px)" }}
         >
-          {!bannerError ? (
+          {!bannerError && albumConfig.bannerSrc ? (
             <img
-              src="/assets/generated/sscc-banner.dim_1400x500.jpg"
-              alt="SScc Banner"
+              src={albumConfig.bannerSrc}
+              alt={albumConfig.bannerAlt}
               className="w-full h-full object-cover object-center"
               onError={() => setBannerError(true)}
             />
@@ -781,7 +908,6 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
               />
             </div>
           )}
-          {/* Gradient overlay */}
           <div
             className="absolute inset-0"
             style={{
@@ -791,7 +917,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
           />
         </div>
 
-        {/* ── SScc Title ──────────────────────────────────────────────────── */}
+        {/* Title */}
         <div className="flex flex-col items-center text-center px-4 -mt-4 mb-10">
           <h1
             className="font-black tracking-widest select-none"
@@ -807,15 +933,14 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
               lineHeight: 1.1,
             }}
           >
-            SScc
+            {albumConfig.displayTitle}
           </h1>
           <p
             className="mt-2 text-xs tracking-[0.4em] uppercase font-medium"
             style={{ color: "oklch(0.55 0.12 175)" }}
           >
-            SteveStrange Curator's Cut
+            {albumConfig.subtitle}
           </p>
-          {/* Iridescent divider */}
           <div
             className="mt-4 h-px w-48"
             style={{
@@ -825,9 +950,9 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
           />
         </div>
 
-        {/* ── Page Content ────────────────────────────────────────────────── */}
+        {/* Page Content */}
         <div className="container mx-auto px-4 pb-16 max-w-4xl space-y-10">
-          {/* ── Featured Album Player ──────────────────────────────────────── */}
+          {/* Featured Player */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <div
@@ -847,11 +972,11 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
             <FeaturedPlayer
               selectedTrack={selectedTrack}
               trackIndex={selectedTrackIndex >= 0 ? selectedTrackIndex : 0}
-              totalTracks={ssccTracks.length}
+              totalTracks={albumTracks.length}
             />
           </section>
 
-          {/* ── About Section ─────────────────────────────────────────────── */}
+          {/* About */}
           <section
             className="rounded-2xl overflow-hidden"
             style={{
@@ -885,10 +1010,9 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
                 <ChevronDown className="h-4 w-4 opacity-60" />
               )}
             </button>
-
             {aboutExpanded && (
               <div className="px-6 pb-6 space-y-5">
-                {SSCC_ABOUT.map((paragraph) => (
+                {albumConfig.about.map((paragraph) => (
                   <p
                     key={paragraph.slice(0, 40)}
                     className="leading-relaxed text-sm md:text-base"
@@ -901,7 +1025,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
             )}
           </section>
 
-          {/* ── Tracks / Collection Section ───────────────────────────────── */}
+          {/* Collection — Horizontal Carousel */}
           <section
             className="rounded-2xl overflow-hidden"
             style={{
@@ -910,6 +1034,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
               boxShadow: "0 0 40px oklch(0.72 0.18 175 / 0.06)",
             }}
           >
+            {/* Section header */}
             <div className="flex items-center gap-3 px-6 py-4">
               <div
                 className="w-1 h-5 rounded-full"
@@ -924,7 +1049,7 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
               >
                 Collection
               </span>
-              {ssccTracks.length > 0 && (
+              {albumTracks.length > 0 && (
                 <span
                   className="text-xs px-2 py-0.5 rounded-full"
                   style={{
@@ -933,156 +1058,68 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
                     border: "1px solid oklch(0.78 0.20 145 / 0.3)",
                   }}
                 >
-                  {ssccTracks.length}{" "}
-                  {ssccTracks.length === 1 ? "track" : "tracks"}
+                  {albumTracks.length}{" "}
+                  {albumTracks.length === 1 ? "track" : "tracks"}
+                </span>
+              )}
+              {albumTracks.length > 2 && (
+                <span
+                  className="ml-auto text-xs"
+                  style={{ color: "oklch(0.42 0.06 175)" }}
+                >
+                  ← scroll →
                 </span>
               )}
             </div>
 
-            <div className="px-6 pb-6">
-              {ssccTracks.length > 0 ? (
-                <ul className="space-y-3" data-ocid="album.collection.list">
-                  {ssccTracks.map((track, i) => {
-                    const isSelected = selectedTrack?.id === track.id;
-                    return (
-                      <li
-                        key={track.id}
-                        data-ocid={`album.collection.item.${i + 1}`}
-                        className="rounded-xl p-4 transition-all duration-200"
-                        style={{
-                          background: isSelected
-                            ? "oklch(0.18 0.08 175 / 0.6)"
-                            : "oklch(0.16 0.05 200)",
-                          border: isSelected
-                            ? "1px solid oklch(0.72 0.18 175 / 0.45)"
-                            : "1px solid oklch(0.24 0.06 175 / 0.3)",
-                          boxShadow: isSelected
-                            ? "0 0 20px oklch(0.72 0.18 175 / 0.1)"
-                            : "none",
-                        }}
-                      >
-                        <div className="flex items-start gap-3 mb-3">
-                          {/* Cover art / number — clicking loads featured player */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTrack(track)}
-                            data-ocid={`album.collection.button.${i + 1}`}
-                            className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center group relative transition-all duration-200 hover:ring-2"
-                            style={{
-                              border: `1px solid ${isSelected ? "oklch(0.72 0.18 175 / 0.5)" : "oklch(0.28 0.06 175 / 0.4)"}`,
-                            }}
-                            aria-label={`Load ${track.title} in featured player`}
-                          >
-                            {track.coverImage ? (
-                              <>
-                                <img
-                                  src={track.coverImage.getDirectURL()}
-                                  alt={`${track.title} cover`}
-                                  className="w-full h-full object-cover"
-                                />
-                                {/* Hover overlay */}
-                                <div
-                                  className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  style={{ background: "oklch(0 0 0 / 0.55)" }}
-                                >
-                                  <Maximize2 className="h-3.5 w-3.5 text-white" />
-                                </div>
-                              </>
-                            ) : (
-                              <div
-                                className="w-full h-full flex items-center justify-center text-xs font-bold"
-                                style={{
-                                  background: isSelected
-                                    ? "linear-gradient(135deg, oklch(0.28 0.12 175), oklch(0.22 0.10 200))"
-                                    : "linear-gradient(135deg, oklch(0.20 0.08 175), oklch(0.16 0.06 200))",
-                                  color: "oklch(0.72 0.18 175)",
-                                }}
-                              >
-                                {isSelected ? (
-                                  <Maximize2 className="h-3.5 w-3.5" />
-                                ) : (
-                                  <span>{i + 1}</span>
-                                )}
-                              </div>
-                            )}
-                          </button>
-
-                          {/* Track info — clicking also loads featured player */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTrack(track)}
-                            className="flex-1 min-w-0 text-left transition-opacity hover:opacity-80"
-                            aria-label={`Play ${track.title}`}
-                          >
-                            <p
-                              className="text-sm font-semibold truncate"
-                              style={{
-                                color: isSelected
-                                  ? "oklch(0.92 0.08 175)"
-                                  : "oklch(0.88 0.06 175)",
-                              }}
-                            >
-                              {track.title}
-                            </p>
-                            {track.creator && (
-                              <p
-                                className="text-xs mt-0.5 truncate"
-                                style={{ color: "oklch(0.55 0.08 175)" }}
-                              >
-                                {track.creator}
-                              </p>
-                            )}
-                          </button>
-
-                          {/* "In player" badge */}
-                          {isSelected && (
-                            <span
-                              className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md font-medium"
-                              style={{
-                                background: "oklch(0.72 0.18 175 / 0.15)",
-                                color: "oklch(0.72 0.18 175)",
-                                border: "1px solid oklch(0.72 0.18 175 / 0.25)",
-                              }}
-                            >
-                              ♪
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Mint button (authenticated users) */}
-                        {isAuthenticated && (
-                          <div className="mt-2 flex justify-end">
-                            <button
-                              type="button"
-                              data-ocid={`album.track.button.${i + 1}`}
-                              onClick={() => {
-                                setMintTrack(track);
-                                setMintDialogOpen(true);
-                              }}
-                              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all duration-200 hover:opacity-90 active:scale-95"
-                              style={{
-                                background: "oklch(0.78 0.20 145 / 0.14)",
-                                color: "oklch(0.78 0.20 145)",
-                                border: "1px solid oklch(0.78 0.20 145 / 0.35)",
-                                boxShadow:
-                                  "0 0 12px oklch(0.78 0.20 145 / 0.10)",
-                              }}
-                            >
-                              <Disc3 className="h-3 w-3" />
-                              <span>Mint NFT</span>
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Inline mini player */}
-                        <TrackPlayer file={track} />
-                      </li>
-                    );
-                  })}
+            {/* Carousel or loading/empty state */}
+            <div className="pb-6">
+              {tracksLoading ? (
+                <div
+                  className="flex items-center justify-center py-10 gap-3"
+                  data-ocid="album.collection.loading_state"
+                >
+                  <div
+                    className="animate-spin rounded-full h-6 w-6 border-b-2"
+                    style={{ borderColor: "oklch(0.72 0.18 175)" }}
+                  />
+                  <span
+                    className="text-sm"
+                    style={{ color: "oklch(0.55 0.10 175)" }}
+                  >
+                    Loading tracks…
+                  </span>
+                </div>
+              ) : albumTracks.length > 0 ? (
+                <ul
+                  data-ocid="album.collection.list"
+                  className="flex gap-4 overflow-x-auto px-6"
+                  style={{
+                    scrollSnapType: "x mandatory",
+                    WebkitOverflowScrolling: "touch",
+                    paddingBottom: "16px",
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "oklch(0.28 0.08 175 / 0.4) transparent",
+                  }}
+                >
+                  {albumTracks.map((track, i) => (
+                    <TrackCard
+                      key={track.id}
+                      track={track}
+                      index={i}
+                      isSelected={selectedTrack?.id === track.id}
+                      isAuthenticated={isAuthenticated}
+                      onSelect={setSelectedTrack}
+                      onMint={(t) => {
+                        setMintTrack(t);
+                        setMintDialogOpen(true);
+                      }}
+                    />
+                  ))}
                 </ul>
               ) : (
                 <div
-                  className="flex flex-col items-center justify-center py-10 gap-3"
+                  className="flex flex-col items-center justify-center py-10 gap-3 px-6"
                   data-ocid="album.collection.empty_state"
                 >
                   <Music
@@ -1093,113 +1130,15 @@ export default function AlbumPage({ albumId, onNavigate }: AlbumPageProps) {
                     className="text-sm text-center max-w-xs"
                     style={{ color: "oklch(0.45 0.06 200)" }}
                   >
-                    No SScc tracks yet — upload tracks with &ldquo;SScc&rdquo;
-                    in the title to populate this collection.
+                    {albumConfig.emptyStateHint}
                   </p>
                 </div>
               )}
             </div>
           </section>
-
-          {/* ── Mint Tier Cards ───────────────────────────────────────────── */}
-          <section>
-            <div className="flex items-center gap-3 mb-6">
-              <div
-                className="w-1 h-5 rounded-full"
-                style={{
-                  background:
-                    "linear-gradient(180deg, oklch(0.78 0.18 45), oklch(0.72 0.18 175))",
-                }}
-              />
-              <span
-                className="text-sm font-semibold tracking-widest uppercase"
-                style={{ color: "oklch(0.78 0.18 45)" }}
-              >
-                Mint Tiers
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {tierConfig.map(
-                ({
-                  tier,
-                  icon,
-                  gradient,
-                  accentColor,
-                  glowColor,
-                  label,
-                  desc,
-                }) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl p-5 flex flex-col gap-3 transition-all duration-300 hover:scale-[1.02]"
-                    style={{
-                      background: gradient,
-                      border: `1px solid ${accentColor.replace(")", " / 0.3)")}`,
-                      boxShadow: `0 0 30px ${glowColor}`,
-                    }}
-                  >
-                    <div
-                      className="flex items-center gap-2"
-                      style={{ color: accentColor }}
-                    >
-                      {icon}
-                      <span className="text-sm font-bold tracking-wide">
-                        {label}
-                      </span>
-                    </div>
-                    <p
-                      className="text-xs leading-relaxed"
-                      style={{ color: "oklch(0.65 0.04 200)" }}
-                    >
-                      {desc}
-                    </p>
-                    {tier && (
-                      <div
-                        className="mt-auto pt-3 space-y-1.5"
-                        style={{
-                          borderTop: `1px solid ${accentColor.replace(")", " / 0.15)")}`,
-                        }}
-                      >
-                        <div className="flex justify-between text-xs">
-                          <span style={{ color: "oklch(0.55 0.05 200)" }}>
-                            Price
-                          </span>
-                          <span
-                            className="font-semibold"
-                            style={{ color: accentColor }}
-                          >
-                            {tier.price.toString()} ICP
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span style={{ color: "oklch(0.55 0.05 200)" }}>
-                            Supply
-                          </span>
-                          <span
-                            className="font-semibold"
-                            style={{ color: accentColor }}
-                          >
-                            {tier.supply.toString()}
-                          </span>
-                        </div>
-                        {tier.description && (
-                          <p
-                            className="text-xs pt-1"
-                            style={{ color: "oklch(0.55 0.05 200)" }}
-                          >
-                            {tier.description}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ),
-              )}
-            </div>
-          </section>
         </div>
       </div>
+
       {mintTrack && (
         <NFTMintDialog
           open={mintDialogOpen}
