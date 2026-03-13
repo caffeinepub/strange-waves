@@ -52,6 +52,7 @@ interface NFTMintDialogProps {
     stableCoin: StableCoin;
     royaltyPercentage: number;
     revenueSplits: RevenueSplit[];
+    editionCount: number;
   }) => Promise<void>;
   isLoading: boolean;
 }
@@ -174,6 +175,7 @@ export function NFTMintDialog({
         : paymentMethod) as StableCoin,
       royaltyPercentage,
       revenueSplits: revenueSplitsFormatted,
+      editionCount: editionType === "1of1" ? 1 : editionCount,
     });
   };
 

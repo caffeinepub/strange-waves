@@ -16,7 +16,7 @@ import type { AudioFile } from "../backend";
 import { NFTMintDialog } from "../components/NFTMintDialog";
 import { useAudioPlayer } from "../contexts/AudioPlayerContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useAudioFiles, useMintNFT } from "../hooks/useQueries";
+import { useAudioFiles, useMintNFTWithParams } from "../hooks/useQueries";
 
 interface AlbumPageProps {
   albumId: string;
@@ -773,7 +773,7 @@ export default function AlbumPage({
 
   const { setTrack: setGlobalTrack } = useAudioPlayer();
   const { identity } = useInternetIdentity();
-  const mintMutation = useMintNFT();
+  const mintMutation = useMintNFTWithParams();
 
   // Tracks load independently — page shell always renders regardless
   const { data: allTracks = [], isLoading: tracksLoading } = useAudioFiles();
@@ -1066,11 +1066,16 @@ export default function AlbumPage({
           isLoading={mintMutation.isPending}
           onMint={async (data) => {
             await mintMutation.mutateAsync({
-              audioFile: mintTrack,
+              audioFile: mintTrack!,
               title: data.title,
               description: data.description,
               artist: data.artist,
               fileType: data.fileType,
+              price: data.price,
+              stableCoin: data.stableCoin,
+              royaltyPercentage: data.royaltyPercentage,
+              revenueSplits: data.revenueSplits,
+              editionCount: data.editionCount,
             });
             setMintDialogOpen(false);
             setMintTrack(null);

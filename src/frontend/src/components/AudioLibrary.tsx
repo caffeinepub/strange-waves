@@ -61,6 +61,7 @@ export function AudioLibrary({
     stableCoin: any;
     royaltyPercentage: number;
     revenueSplits: any[];
+    editionCount?: number;
   }) => {
     if (!selectedFileForMint) return;
 

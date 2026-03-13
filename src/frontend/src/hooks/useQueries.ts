@@ -391,6 +391,7 @@ export function useMintNFTWithParams() {
       stableCoin,
       royaltyPercentage,
       revenueSplits,
+      editionCount,
     }: {
       audioFile: AudioFile;
       title: string;
@@ -401,6 +402,7 @@ export function useMintNFTWithParams() {
       stableCoin: StableCoin;
       royaltyPercentage: number;
       revenueSplits: RevenueSplit[];
+      editionCount?: number;
     }) => {
       if (!actor || !isActorReady) {
         throw new Error("Actor not ready. Please wait or log in.");
@@ -430,22 +432,29 @@ export function useMintNFTWithParams() {
         params,
       };
 
-      const response = await actor.mintNFTwithParams(request);
-
-      if (response.__kind__ === "unauthorized") {
-        throw new Error("Unauthorized: You must be logged in to mint NFTs");
+      const editions = editionCount ?? 1;
+      let lastTokenId: bigint | undefined;
+      for (let i = 0; i < editions; i++) {
+        const response = await actor.mintNFTwithParams(request);
+        if (response.__kind__ === "unauthorized") {
+          throw new Error("Unauthorized: You must be logged in to mint NFTs");
+        }
+        if (response.__kind__ === "invalidInput") {
+          throw new Error(`Invalid input: ${response.invalidInput}`);
+        }
+        lastTokenId = response.ok;
       }
-
-      if (response.__kind__ === "invalidInput") {
-        throw new Error(`Invalid input: ${response.invalidInput}`);
-      }
-
-      return response.ok;
+      return lastTokenId;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      const count = variables.editionCount ?? 1;
       queryClient.invalidateQueries({ queryKey: ["nfts"] });
       queryClient.invalidateQueries({ queryKey: ["nftRecordsWithParams"] });
-      toast.success("NFT minted successfully!");
+      toast.success(
+        count > 1
+          ? `Minted ${count} NFT editions successfully!`
+          : "NFT minted successfully!",
+      );
     },
     onError: (error: Error) => {
       toast.error(`Failed to mint NFT: ${error.message}`);
