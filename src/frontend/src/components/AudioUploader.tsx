@@ -10,6 +10,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   AlertCircle,
@@ -28,6 +35,44 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useMintNFT, useUploadAudioFile } from "../hooks/useQueries";
 import { NFTMintDialog } from "./NFTMintDialog";
 
+type GenreKey =
+  | "pop"
+  | "rock"
+  | "jazz"
+  | "hipHop"
+  | "electronic"
+  | "classical"
+  | "other";
+
+const GENRE_OPTIONS: { value: GenreKey; label: string }[] = [
+  { value: "pop", label: "Pop" },
+  { value: "rock", label: "Rock" },
+  { value: "jazz", label: "Jazz" },
+  { value: "hipHop", label: "Hip-Hop" },
+  { value: "electronic", label: "Electronic" },
+  { value: "classical", label: "Classical" },
+  { value: "other", label: "Other" },
+];
+
+function genreKeyToValue(key: GenreKey): Genre {
+  switch (key) {
+    case "pop":
+      return { __kind__: "pop", pop: null };
+    case "rock":
+      return { __kind__: "rock", rock: null };
+    case "jazz":
+      return { __kind__: "jazz", jazz: null };
+    case "hipHop":
+      return { __kind__: "hipHop", hipHop: null };
+    case "electronic":
+      return { __kind__: "electronic", electronic: null };
+    case "classical":
+      return { __kind__: "classical", classical: null };
+    case "other":
+      return { __kind__: "other", other: "Other" };
+  }
+}
+
 export function AudioUploader() {
   const { identity } = useInternetIdentity();
   const { isActorReady, isActorInitializing } = useActorReady();
@@ -38,6 +83,7 @@ export function AudioUploader() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState<GenreKey>("other");
   const [isPublic, setIsPublic] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -84,7 +130,6 @@ export function AudioUploader() {
         setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
       }
 
-      // Extract metadata
       const audio = new Audio();
       audio.src = URL.createObjectURL(selectedFile);
       audio.addEventListener("loadedmetadata", () => {
@@ -101,7 +146,6 @@ export function AudioUploader() {
       return;
     }
 
-    // Check file size (max 5MB)
     if (selectedFile.size > 5 * 1024 * 1024) {
       toast.error("Image file is too large. Maximum size is 5MB.");
       return;
@@ -109,7 +153,6 @@ export function AudioUploader() {
 
     setImageFile(selectedFile);
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
@@ -139,7 +182,6 @@ export function AudioUploader() {
 
       const files = Array.from(e.dataTransfer.files);
 
-      // Separate audio and image files
       const audioFiles = files.filter((f) => f.type.startsWith("audio/"));
       const imageFiles = files.filter((f) => f.type.startsWith("image/"));
 
@@ -185,10 +227,8 @@ export function AudioUploader() {
       const size = audioFile.size;
       const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Default genre to "other"
-      const genreValue: Genre = { __kind__: "other", other: "Unknown" };
+      const genreValue: Genre = genreKeyToValue(selectedGenre);
 
-      // Prepare cover image if provided
       let coverImageData: Uint8Array | undefined = undefined;
       if (imageFile) {
         const imageArrayBuffer = await imageFile.arrayBuffer();
@@ -218,6 +258,7 @@ export function AudioUploader() {
       setImagePreview(null);
       setTitle("");
       setCreator("");
+      setSelectedGenre("other");
       setIsPublic(true);
       setUploadProgress(0);
       setUploadedAudioFile(null);
@@ -249,7 +290,6 @@ export function AudioUploader() {
     return null;
   }
 
-  // Show actor readiness status
   const showActorWarning = !isActorReady && !isActorInitializing;
   const isUploadDisabled =
     !audioFile ||
@@ -296,6 +336,7 @@ export function AudioUploader() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            data-ocid="uploader.dropzone"
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragging
                 ? "border-primary bg-primary/5"
@@ -399,6 +440,7 @@ export function AudioUploader() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter audio title"
                 disabled={!isActorReady}
+                data-ocid="uploader.title.input"
               />
             </div>
 
@@ -410,7 +452,29 @@ export function AudioUploader() {
                 onChange={(e) => setCreator(e.target.value)}
                 placeholder="Enter creator or artist name"
                 disabled={!isActorReady}
+                data-ocid="uploader.creator.input"
               />
+            </div>
+
+            {/* Genre Select */}
+            <div className="space-y-2">
+              <Label htmlFor="genre">Genre</Label>
+              <Select
+                value={selectedGenre}
+                onValueChange={(v) => setSelectedGenre(v as GenreKey)}
+                disabled={!isActorReady}
+              >
+                <SelectTrigger id="genre" data-ocid="uploader.genre.select">
+                  <SelectValue placeholder="Select a genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENRE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -419,6 +483,7 @@ export function AudioUploader() {
                 checked={isPublic}
                 onCheckedChange={setIsPublic}
                 disabled={!isActorReady}
+                data-ocid="uploader.public.switch"
               />
               <Label htmlFor="public">Make this audio file public</Label>
             </div>
@@ -440,6 +505,7 @@ export function AudioUploader() {
             onClick={handleUpload}
             disabled={isUploadDisabled}
             className="w-full"
+            data-ocid="uploader.submit_button"
           >
             {uploadMutation.isPending ? (
               <>
