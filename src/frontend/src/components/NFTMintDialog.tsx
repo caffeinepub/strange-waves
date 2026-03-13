@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   Image as ImageIcon,
   Layers,
   Loader2,
+  Lock,
   Music,
   Package,
   Paperclip,
@@ -39,6 +41,13 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 type EditionType = "1of1" | "collection";
 type PaymentMethod = "icp" | StableCoin;
 
+export interface MintAttachment {
+  file: File;
+  name: string;
+  type: string;
+  isPrivate: boolean;
+}
+
 interface NFTMintDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,6 +62,7 @@ interface NFTMintDialogProps {
     royaltyPercentage: number;
     revenueSplits: RevenueSplit[];
     editionCount: number;
+    attachments: MintAttachment[];
   }) => Promise<void>;
   isLoading: boolean;
 }
@@ -102,7 +112,7 @@ export function NFTMintDialog({
   const [title, setTitle] = useState(audioFile.title);
   const [artist, setArtist] = useState(audioFile.creator);
   const [description, setDescription] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<MintAttachment[]>([]);
 
   // Pricing
   const [usdPrice, setUsdPrice] = useState<string>("10");
@@ -176,6 +186,7 @@ export function NFTMintDialog({
       royaltyPercentage,
       revenueSplits: revenueSplitsFormatted,
       editionCount: editionType === "1of1" ? 1 : editionCount,
+      attachments,
     });
   };
 
@@ -197,6 +208,18 @@ export function NFTMintDialog({
     const updated = [...revenueSplits];
     updated[index][field] = value;
     setRevenueSplits(updated);
+  };
+
+  const toggleAttachmentPrivate = (index: number) => {
+    setAttachments((prev) =>
+      prev.map((att, i) =>
+        i === index ? { ...att, isPrivate: !att.isPrivate } : att,
+      ),
+    );
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const totalPercentage = revenueSplits.reduce((sum, split) => {
@@ -513,11 +536,12 @@ export function NFTMintDialog({
                 />
               </div>
 
+              {/* Attachments with Private Toggle */}
               <div className="space-y-2">
                 <Label>Attachments (Optional)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Attach PDFs, images, audio, or video files for special NFT
-                  customization.
+                  Attach PDFs, images, audio, or video files. Mark files as
+                  &ldquo;Private&rdquo; to hide them until the NFT is owned.
                 </p>
                 <label
                   className="flex items-center gap-2 cursor-pointer border border-dashed border-muted-foreground/40 rounded-lg px-4 py-3 hover:border-primary/60 transition-colors"
@@ -535,35 +559,56 @@ export function NFTMintDialog({
                     disabled={isLoading}
                     onChange={(e) => {
                       if (e.target.files) {
-                        setAttachments((prev) => [
-                          ...prev,
-                          ...Array.from(e.target.files!),
-                        ]);
+                        const newFiles: MintAttachment[] = Array.from(
+                          e.target.files,
+                        ).map((file) => ({
+                          file,
+                          name: file.name,
+                          type: file.type || "file",
+                          isPrivate: false,
+                        }));
+                        setAttachments((prev) => [...prev, ...newFiles]);
                       }
                     }}
                   />
                 </label>
                 {attachments.length > 0 && (
-                  <ul className="space-y-1 mt-2">
-                    {attachments.map((file, i) => (
+                  <ul className="space-y-2 mt-2">
+                    {attachments.map((att, i) => (
                       <li
-                        key={file.name}
-                        className="flex items-center justify-between text-sm bg-muted/40 rounded px-3 py-1.5"
+                        // biome-ignore lint/suspicious/noArrayIndexKey: attachment has no stable id
+                        key={i}
+                        className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 space-y-2"
                       >
-                        <span className="truncate max-w-[260px]">
-                          {file.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAttachments((prev) =>
-                              prev.filter((_, idx) => idx !== i),
-                            )
-                          }
-                          className="ml-2 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-sm max-w-[240px]">
+                            {att.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(i)}
+                            disabled={isLoading}
+                            className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        {/* Private toggle */}
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`attachment-private-${i}`}
+                            checked={att.isPrivate}
+                            onCheckedChange={() => toggleAttachmentPrivate(i)}
+                            disabled={isLoading}
+                          />
+                          <label
+                            htmlFor={`attachment-private-${i}`}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none"
+                          >
+                            <Lock className="h-3 w-3" />
+                            Private (owner-only) — hidden until NFT is owned
+                          </label>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -606,7 +651,7 @@ export function NFTMintDialog({
                 </p>
               </div>
 
-              {/* ICP Conversion Box — always visible */}
+              {/* ICP Conversion Box */}
               <div className="rounded-lg border bg-muted/30 p-4 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">ICP Equivalent</span>
@@ -644,7 +689,7 @@ export function NFTMintDialog({
                 )}
               </div>
 
-              {/* Payment Method Selection — no default */}
+              {/* Payment Method Selection */}
               <div className="space-y-3">
                 <Label>Payment Method *</Label>
                 <p className="text-xs text-muted-foreground -mt-1">
@@ -870,6 +915,15 @@ export function NFTMintDialog({
                     {revenueSplits.length} address(es)
                   </span>
                 </div>
+                {attachments.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Attachments:</span>
+                    <span className="font-medium">
+                      {attachments.length} file(s),{" "}
+                      {attachments.filter((a) => a.isPrivate).length} private
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

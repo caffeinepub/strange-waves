@@ -31,8 +31,6 @@ import {
   Loader2,
   Music,
   Package,
-  Pause,
-  Play,
   ShoppingBag,
   Store,
   Tag,
@@ -57,6 +55,7 @@ interface NFTListing {
   description: string;
   fileType: { audio: null } | { image: null } | { combined: null };
 }
+import { NFTDetailModal } from "../components/NFTDetailModal";
 import {
   DelistButton,
   ListForSaleDialog,
@@ -76,10 +75,6 @@ export function MusicMints() {
     record: NFTRecordWithParams;
     index: number;
   } | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null,
-  );
   const [isEditExpanded, setIsEditExpanded] = useState(false);
   const [listForSaleState, setListForSaleState] = useState<{
     tokenId: bigint;
@@ -113,30 +108,7 @@ export function MusicMints() {
   // Build a set of listed tokenIds for quick lookup
   const listedTokenIds = new Set(listings.map((l) => l.tokenId.toString()));
 
-  const handlePlayPause = async (nftRecord: NFTRecordWithParams) => {
-    if (!nftRecord.audioBlob) return;
-    if (audioElement && isPlaying) {
-      audioElement.pause();
-      setIsPlaying(false);
-      setAudioElement(null);
-    } else {
-      const audio = new Audio(nftRecord.audioBlob.getDirectURL());
-      audio.play();
-      setIsPlaying(true);
-      setAudioElement(audio);
-      audio.onended = () => {
-        setIsPlaying(false);
-        setAudioElement(null);
-      };
-    }
-  };
-
   const handleCloseDialog = () => {
-    if (audioElement) {
-      audioElement.pause();
-      setIsPlaying(false);
-      setAudioElement(null);
-    }
     setSelectedNFT(null);
   };
 
@@ -692,106 +664,23 @@ export function MusicMints() {
         </section>
       )}
 
-      {/* NFT Detail Dialog */}
+      {/* NFT Detail Modal */}
       {selectedNFT && (
-        <Dialog open={!!selectedNFT} onOpenChange={handleCloseDialog}>
-          <DialogContent
-            data-ocid="nft.detail.dialog"
-            className="max-w-3xl max-h-[90vh]"
-          >
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {getFileTypeIcon(selectedNFT.record.metadata.fileType)}
-                {selectedNFT.record.metadata.title}
-              </DialogTitle>
-              <DialogDescription>
-                NFT #{selectedNFT.index} &bull;{" "}
-                {formatPrice(
-                  selectedNFT.record.params.price,
-                  selectedNFT.record.params.stableCoin,
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh]">
-              <div className="space-y-6 pr-4">
-                {selectedNFT.record.imageBlob && (
-                  <div className="overflow-hidden rounded-lg">
-                    <img
-                      src={selectedNFT.record.imageBlob.getDirectURL()}
-                      alt={selectedNFT.record.metadata.title}
-                      className="w-full object-contain max-h-80"
-                    />
-                  </div>
-                )}
-                {selectedNFT.record.audioBlob && (
-                  <div className="flex items-center gap-3">
-                    <Button
-                      data-ocid="nft.detail.play_button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handlePlayPause(selectedNFT.record)}
-                      className="h-10 w-10 shrink-0"
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-5 w-5" />
-                      ) : (
-                        <Play className="h-5 w-5" />
-                      )}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {isPlaying ? "Now Playing" : "Preview Audio"}
-                    </span>
-                  </div>
-                )}
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Artist</p>
-                    <p className="font-medium">
-                      {selectedNFT.record.metadata.artist}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Type</p>
-                    <p className="font-medium">
-                      {getFileTypeLabel(selectedNFT.record.metadata.fileType)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      Royalty
-                    </p>
-                    <p className="font-medium">
-                      {Number(selectedNFT.record.params.royaltyPercentage)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      Token ID
-                    </p>
-                    <p className="font-mono font-medium">
-                      #{selectedNFT.index}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs mb-1">Minted</p>
-                    <p className="font-medium">
-                      {formatDate(selectedNFT.record.metadata.mintTimestamp)}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs mb-1">
-                      Description
-                    </p>
-                    <p className="text-sm">
-                      {selectedNFT.record.metadata.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+        <NFTDetailModal
+          open={!!selectedNFT}
+          onOpenChange={(open) => !open && handleCloseDialog()}
+          nft={selectedNFT.record}
+          tokenId={BigInt(selectedNFT.index)}
+          currentUserPrincipal={myPrincipal}
+          listing={listings.find(
+            (l) => l.tokenId === BigInt(selectedNFT.index),
+          )}
+          isAuthenticated={isAuthenticated}
+          onRequestBuy={(tokenId, title, priceE8s) => {
+            handleCloseDialog();
+            setConfirmPurchase({ tokenId, title, priceE8s });
+          }}
+        />
       )}
 
       {/* List for Sale Dialog */}
