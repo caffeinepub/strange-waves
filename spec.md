@@ -1,35 +1,34 @@
 # Strange Waves
 
 ## Current State
-- Music Mints page shows NFT listings in a basic card grid with title, token ID, owner, price, and a Buy/Claim button
-- NFTMintDialog handles minting with attachment support (PDF, image, audio, video)
-- No detail popup exists for NFT listings
-- No audio preview is available from the marketplace
-- All attached files are visible regardless of NFT ownership
+The NFT marketplace "List for Sale" feature fails with `this.actor.listNFTForSale is not a function`. The backend Motoko canister has `listNFTForSale`, `delistNFT`, `getListings`, `buyNFT`, `ownerOf`, and `transferNFT` implemented, but these methods are missing from the IDL factory files (`backend.did.js` and `backend.did.d.ts`). This means the ICP actor is created without these methods, so they return "not a function" errors.
+
+Additionally, the `backend.ts` wrapper stubs pass the raw Candid variant result directly (e.g. `{ ok: null }`) but `useQueries.ts` checks `result.__kind__ === "ok"`, so results would be misread even if the call succeeded.
+
+The `ListForSaleDialog` only handles a single `tokenId`. For collections (multiple editions), there's no way to list a set quantity at once.
 
 ## Requested Changes (Diff)
 
 ### Add
-- NFT Detail Popup (modal) that opens when a buyer clicks any NFT listing card on the Music Mints page
-  - Shows: cover art, title, creator, edition info (e.g. "Edition 2 of 5"), NFT type, royalty %, payment token, price, description, ownership status
-  - 30-second audio preview: plays the first 30 seconds of the associated track, then stops. Show a progress bar and play/pause toggle
-  - Private Attachment section: displays a locked placeholder ("Unlock after purchase") for any file marked as private. If the viewer is the current NFT owner, the file is revealed and downloadable
-  - Buy Now / Claim NFT button inside the modal
-- Toggle in the NFTMintDialog for each attached file: "Private (owner-only)" checkbox. If checked, that attachment is flagged as private in the NFT metadata
+- `NFTListing`, `ListNFTRawResult`, `TransferNFTRawResult`, `BuyNFTRawResult` IDL types in `backend.did.js` (both module-level and inside `idlFactory`)
+- `NFTListing` interface + `ListNFTRawResult`/`TransferNFTRawResult`/`BuyNFTRawResult` variant types in `backend.did.d.ts`
+- Marketplace methods to `_SERVICE` in `backend.did.d.ts`: `getListings`, `listNFTForSale`, `delistNFT`, `buyNFT`, `ownerOf`, `transferNFT`
+- Quantity input to `ListForSaleDialog` (1 to N where N = number of token IDs in the collection group)
+- `collectionTokenIds: bigint[]` prop to `ListForSaleDialog` replacing single `tokenId: bigint`
 
 ### Modify
-- NFT listing cards on Music Mints page: add a "View Details" button / make card clickable to open the new detail modal
-- NFT metadata type to include a `privateAttachments` flag per attachment item
+- `backend.ts`: Fix marketplace method stubs to map raw Candid variants to `__kind__` format. `getListings` should map `fileType: { audio: null }` to `FileType.audio`. `ownerOf` should convert `[] | [Principal]` to `Principal | null`. Other methods should use `Object.keys(result)[0]` to extract the variant key as `__kind__`.
+- `backend.did.js`: Add NFTListing, ListNFTResponse, TransferNFTResponse, BuyNFTResponse IDL type definitions and add service methods to both `idlService` and `idlFactory` return value
+- `backend.did.d.ts`: Add types and service methods
+- `MusicMints.tsx`: Update `groupNFTsByTitle` to track all token IDs per group (not just the first). Update `listForSaleState` to use `tokenIds: bigint[]`. Pass all collection token IDs to `ListForSaleDialog`.
+- `NFTMarketplaceActions.tsx`: `ListForSaleDialog` accepts `collectionTokenIds: bigint[]`. Adds a "Quantity to List" numeric input (min 1, max = collectionTokenIds.length). On submit, loops through first N token IDs and calls `listMutation.mutateAsync` for each.
 
 ### Remove
-- Nothing removed
+Nothing removed.
 
 ## Implementation Plan
-1. Add `isPrivate` boolean field to the attachment object in NFTMintDialog; persist it in the minted NFT metadata
-2. Create `NFTDetailModal.tsx` component with:
-   - Full metadata display
-   - 30-second audio preview with play/pause and progress bar (clamps playback at 30s)
-   - Attachment list: private ones show a lock icon + "Own this NFT to unlock" unless `currentUser === nft.owner`
-   - Buy/Claim action button
-3. Wire NFT listing cards in MusicMints.tsx to open the modal on click
-4. Add "Private (owner-only)" checkbox per attachment in NFTMintDialog
+1. Fix `backend.did.js`: add NFTListing record, ListNFTResponse/TransferNFTResponse/BuyNFTResponse variants, and the 6 service methods to both `idlService` and `idlFactory`
+2. Fix `backend.did.d.ts`: add NFTListing interface, raw result types, and methods to `_SERVICE`
+3. Fix `backend.ts`: update the 6 marketplace stubs to properly map Candid variants to `__kind__` objects
+4. Fix `NFTMarketplaceActions.tsx`: accept `collectionTokenIds` array + quantity input, loop on submit
+5. Fix `MusicMints.tsx`: track all tokenIds per group, pass them to `ListForSaleDialog`

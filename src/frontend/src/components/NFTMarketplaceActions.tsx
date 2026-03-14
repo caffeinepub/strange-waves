@@ -1,4 +1,3 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,37 +10,91 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle2, Loader2, Tag, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CheckCircle2, Coins, Loader2, Tag, X } from "lucide-react";
 import { useState } from "react";
 import { useDelistNFT, useListNFTForSale } from "../hooks/useQueries";
+
+const PAYMENT_METHODS = [
+  { value: "ICP", label: "ICP Token" },
+  { value: "stablecoin", label: "Stablecoin" },
+] as const;
+
+const STABLECOINS = [
+  { value: "USDC", label: "USDC" },
+  { value: "ckUSDC", label: "ckUSDC" },
+  { value: "TUSD", label: "TUSD" },
+  { value: "RLUSD", label: "RLUSD" },
+  { value: "USDE", label: "USDE" },
+  { value: "USDP", label: "USDP" },
+] as const;
 
 // ===== LIST FOR SALE DIALOG =====
 export function ListForSaleDialog({
   open,
   onOpenChange,
-  tokenId,
+  collectionTokenIds,
   nftTitle,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tokenId: bigint;
+  collectionTokenIds: bigint[];
   nftTitle: string;
 }) {
-  const [priceIcp, setPriceIcp] = useState("");
+  const [price, setPrice] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"" | "ICP" | "stablecoin">(
+    "",
+  );
+  const [selectedStablecoin, setSelectedStablecoin] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [listingProgress, setListingProgress] = useState(0);
   const listMutation = useListNFTForSale();
 
-  const handleList = async () => {
-    const priceNum = Number.parseFloat(priceIcp);
-    if (Number.isNaN(priceNum) || priceNum <= 0) return;
-    const priceE8s = BigInt(Math.round(priceNum * 1e8));
-    await listMutation.mutateAsync({ tokenId, priceE8s });
-    onOpenChange(false);
-    setPriceIcp("");
-  };
+  const resolvedToken =
+    paymentMethod === "stablecoin" ? selectedStablecoin : paymentMethod;
+
+  const priceLabel =
+    paymentMethod === "stablecoin" && selectedStablecoin
+      ? `Price (${selectedStablecoin})`
+      : paymentMethod === "ICP"
+        ? "Price (ICP)"
+        : "Price";
+
+  const pricePlaceholder = paymentMethod === "ICP" ? "0.1000" : "10.00";
 
   const isValid =
-    !Number.isNaN(Number.parseFloat(priceIcp)) &&
-    Number.parseFloat(priceIcp) > 0;
+    !!paymentMethod &&
+    (paymentMethod === "ICP" || !!selectedStablecoin) &&
+    !Number.isNaN(Number.parseFloat(price)) &&
+    Number.parseFloat(price) > 0;
+
+  const handleList = async () => {
+    if (!isValid) return;
+    const priceNum = Number.parseFloat(price);
+    const priceE8s = BigInt(Math.round(priceNum * 1e8));
+    const toList = collectionTokenIds.slice(0, quantity);
+    setListingProgress(0);
+    for (let i = 0; i < toList.length; i++) {
+      await listMutation.mutateAsync({
+        tokenId: toList[i],
+        priceE8s,
+        paymentToken: resolvedToken || undefined,
+      });
+      setListingProgress(i + 1);
+    }
+    onOpenChange(false);
+    setPrice("");
+    setPaymentMethod("");
+    setSelectedStablecoin("");
+    setQuantity(1);
+    setListingProgress(0);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,42 +108,113 @@ export function ListForSaleDialog({
             List NFT for Sale
           </DialogTitle>
           <DialogDescription>
-            Set a price in ICP for &ldquo;{nftTitle}&rdquo;. Ownership transfers
-            on-chain when claimed.
+            Set your asking price for &ldquo;{nftTitle}&rdquo;. Ownership
+            transfers on-chain when a buyer claims the NFT.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Payment Method */}
           <div className="space-y-2">
-            <Label htmlFor="list-price">Price (ICP)</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-                ICP
-              </span>
-              <Input
-                id="list-price"
-                data-ocid="nft.list_price.input"
-                type="number"
-                min="0.0001"
-                step="0.0001"
-                value={priceIcp}
-                onChange={(e) => setPriceIcp(e.target.value)}
-                placeholder="1.0000"
-                className="pl-12"
-                disabled={listMutation.isPending}
-              />
+            <Label>Payment Method</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {PAYMENT_METHODS.map((method) => (
+                <button
+                  key={method.value}
+                  type="button"
+                  data-ocid={`nft.payment_method.${method.value.toLowerCase()}.toggle`}
+                  onClick={() => {
+                    setPaymentMethod(method.value);
+                    if (method.value !== "stablecoin")
+                      setSelectedStablecoin("");
+                  }}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all ${
+                    paymentMethod === method.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  }`}
+                  disabled={listMutation.isPending}
+                >
+                  <Coins className="h-3.5 w-3.5" />
+                  {method.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <Alert className="border-amber-500/40 bg-amber-500/5">
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-            <AlertDescription className="text-xs text-amber-700 dark:text-amber-400">
-              Full ICP payment integration is coming soon. Listing transfers
-              on-chain ownership permanently when a buyer claims the NFT.
-            </AlertDescription>
-          </Alert>
+          {/* Stablecoin selector */}
+          {paymentMethod === "stablecoin" && (
+            <div className="space-y-2">
+              <Label>Stablecoin</Label>
+              <Select
+                value={selectedStablecoin}
+                onValueChange={setSelectedStablecoin}
+                disabled={listMutation.isPending}
+              >
+                <SelectTrigger data-ocid="nft.stablecoin.select">
+                  <SelectValue placeholder="Select stablecoin…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STABLECOINS.map((coin) => (
+                    <SelectItem key={coin.value} value={coin.value}>
+                      {coin.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Price */}
+          {paymentMethod && (
+            <div className="space-y-2">
+              <Label htmlFor="list-price">{priceLabel}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  {resolvedToken || paymentMethod}
+                </span>
+                <Input
+                  id="list-price"
+                  data-ocid="nft.list_price.input"
+                  type="number"
+                  min="0.0001"
+                  step="0.0001"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder={pricePlaceholder}
+                  className="pl-16"
+                  disabled={listMutation.isPending}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Quantity */}
+        {collectionTokenIds.length > 1 && (
+          <div className="space-y-2">
+            <Label htmlFor="list-quantity">
+              Quantity to List (max {collectionTokenIds.length})
+            </Label>
+            <Input
+              id="list-quantity"
+              data-ocid="nft.list_quantity.input"
+              type="number"
+              min={1}
+              max={collectionTokenIds.length}
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(
+                  Math.min(
+                    collectionTokenIds.length,
+                    Math.max(1, Number.parseInt(e.target.value) || 1),
+                  ),
+                )
+              }
+              disabled={listMutation.isPending}
+            />
+          </div>
+        )}
         <DialogFooter>
           <Button
             data-ocid="nft.list_for_sale.cancel_button"
@@ -108,12 +232,14 @@ export function ListForSaleDialog({
             {listMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Listing…
+                {quantity > 1
+                  ? `Listing ${listingProgress}/${quantity}…`
+                  : "Listing…"}
               </>
             ) : (
               <>
                 <Tag className="mr-2 h-4 w-4" />
-                List for Sale
+                {quantity > 1 ? `List ${quantity} for Sale` : "List for Sale"}
               </>
             )}
           </Button>

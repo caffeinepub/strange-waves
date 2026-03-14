@@ -149,6 +149,18 @@ export interface _CaffeineStorageRefillResult {
   'success' : [] | [boolean],
   'topped_up_amount' : [] | [bigint],
 }
+export interface NFTListing {
+  'tokenId' : bigint,
+  'seller' : Principal,
+  'priceE8s' : bigint,
+  'listedAt' : bigint,
+  'title' : string,
+  'description' : string,
+  'fileType' : FileType,
+}
+export type ListNFTRawResult = { 'ok' : null } | { 'notFound' : null } | { 'unauthorized' : null } | { 'alreadyListed' : null };
+export type TransferNFTRawResult = { 'ok' : null } | { 'notFound' : null } | { 'unauthorized' : null } | { 'alreadyListed' : null };
+export type BuyNFTRawResult = { 'ok' : null } | { 'notListed' : null } | { 'unauthorized' : null } | { 'notFound' : null } | { 'cannotBuyOwn' : null };
 export interface _SERVICE {
   '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
   '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
@@ -206,6 +218,12 @@ export interface _SERVICE {
   'updatePlaylistTitle' : ActorMethod<[string, string], undefined>,
   'uploadAudioFile' : ActorMethod<[AudioFile], string>,
   'uploadTrackWithAlbum' : ActorMethod<[AudioFile, [] | [string]], string>,
+  'buyNFT' : ActorMethod<[bigint], BuyNFTRawResult>,
+  'delistNFT' : ActorMethod<[bigint], TransferNFTRawResult>,
+  'getListings' : ActorMethod<[], Array<NFTListing>>,
+  'listNFTForSale' : ActorMethod<[bigint, bigint], ListNFTRawResult>,
+  'ownerOf' : ActorMethod<[bigint], [] | [Principal]>,
+  'transferNFT' : ActorMethod<[bigint, Principal], TransferNFTRawResult>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

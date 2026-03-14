@@ -971,22 +971,31 @@ export class Backend implements backendInterface {
         }
     }
     async getListings(): Promise<Array<NFTListing>> {
-        return (this.actor as any).getListings();
+        const results = await (this.actor as any).getListings();
+        return results.map((item: any) => ({
+            ...item,
+            fileType: Object.keys(item.fileType)[0] as FileType,
+        }));
     }
     async listNFTForSale(tokenId: bigint, priceE8s: bigint): Promise<NFTTransferResult> {
-        return (this.actor as any).listNFTForSale(tokenId, priceE8s);
+        const result = await (this.actor as any).listNFTForSale(tokenId, priceE8s);
+        return { __kind__: Object.keys(result)[0] } as NFTTransferResult;
     }
     async delistNFT(tokenId: bigint): Promise<NFTTransferResult> {
-        return (this.actor as any).delistNFT(tokenId);
+        const result = await (this.actor as any).delistNFT(tokenId);
+        return { __kind__: Object.keys(result)[0] } as NFTTransferResult;
     }
     async buyNFT(tokenId: bigint): Promise<BuyNFTResult> {
-        return (this.actor as any).buyNFT(tokenId);
+        const result = await (this.actor as any).buyNFT(tokenId);
+        return { __kind__: Object.keys(result)[0] } as BuyNFTResult;
     }
     async ownerOf(tokenId: bigint): Promise<Principal | null> {
-        return (this.actor as any).ownerOf(tokenId);
+        const result = await (this.actor as any).ownerOf(tokenId);
+        return Array.isArray(result) && result.length > 0 ? result[0] : null;
     }
     async transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult> {
-        return (this.actor as any).transferNFT(tokenId, to);
+        const result = await (this.actor as any).transferNFT(tokenId, to);
+        return { __kind__: Object.keys(result)[0] } as NFTTransferResult;
     }
 }
 async function from_candid_AudioFile_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFile): Promise<AudioFile> {

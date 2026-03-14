@@ -161,6 +161,35 @@ export const MintNFTWithParamsRequest = IDL.Record({
   'params' : NFTParameters,
 });
 
+export const NFTListing = IDL.Record({
+  'tokenId' : IDL.Nat,
+  'seller' : IDL.Principal,
+  'priceE8s' : IDL.Nat,
+  'listedAt' : IDL.Int,
+  'title' : IDL.Text,
+  'description' : IDL.Text,
+  'fileType' : FileType,
+});
+export const ListNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'notFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
+  'alreadyListed' : IDL.Null,
+});
+export const TransferNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'notFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
+  'alreadyListed' : IDL.Null,
+});
+export const BuyNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'notListed' : IDL.Null,
+  'unauthorized' : IDL.Null,
+  'notFound' : IDL.Null,
+  'cannotBuyOwn' : IDL.Null,
+});
+
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
       [IDL.Vec(IDL.Nat8)],
@@ -254,6 +283,12 @@ export const idlService = IDL.Service({
       [IDL.Text],
       [],
     ),
+  'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
+  'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
+  'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
+  'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
+  'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
+  'transferNFT' : IDL.Func([IDL.Nat, IDL.Principal], [TransferNFTResponse], []),
 });
 
 export const idlInitArgs = [];
@@ -412,6 +447,35 @@ export const idlFactory = ({ IDL }) => {
     'params' : NFTParameters,
   });
   
+  const NFTListing = IDL.Record({
+    'tokenId' : IDL.Nat,
+    'seller' : IDL.Principal,
+    'priceE8s' : IDL.Nat,
+    'listedAt' : IDL.Int,
+    'title' : IDL.Text,
+    'description' : IDL.Text,
+    'fileType' : FileType,
+  });
+  const ListNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'notFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
+    'alreadyListed' : IDL.Null,
+  });
+  const TransferNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'notFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
+    'alreadyListed' : IDL.Null,
+  });
+  const BuyNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'notListed' : IDL.Null,
+    'unauthorized' : IDL.Null,
+    'notFound' : IDL.Null,
+    'cannotBuyOwn' : IDL.Null,
+  });
+  
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
         [IDL.Vec(IDL.Nat8)],
@@ -505,6 +569,12 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text],
         [],
       ),
+    'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
+    'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
+    'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
+    'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
+    'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
+    'transferNFT' : IDL.Func([IDL.Nat, IDL.Principal], [TransferNFTResponse], []),
   });
 };
 

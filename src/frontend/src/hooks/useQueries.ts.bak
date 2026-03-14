@@ -903,14 +903,14 @@ export function useGetListings() {
 
 export function useListNFTForSale() {
   const { actor } = useActor();
+  const { isActorReady } = useActorReady();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       tokenId,
       priceE8s,
-      paymentToken: _paymentToken,
-    }: { tokenId: bigint; priceE8s: bigint; paymentToken?: string }) => {
-      if (!actor) throw new Error("Actor not ready");
+    }: { tokenId: bigint; priceE8s: bigint }) => {
+      if (!actor || !isActorReady) throw new Error("Actor not ready");
       const result = await actor.listNFTForSale(tokenId, priceE8s);
       if (result.__kind__ === "notFound") throw new Error("NFT not found");
       if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
@@ -918,13 +918,12 @@ export function useListNFTForSale() {
         throw new Error("Already listed");
       return result;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["nftListings"] });
       queryClient.invalidateQueries({
         queryKey: ["callerNFTRecordsWithParams"],
       });
-      const token = variables.paymentToken ?? "ICP";
-      toast.success(`NFT listed for sale (${token})!`);
+      toast.success("NFT listed for sale!");
     },
     onError: (error: Error) => {
       toast.error(`Failed to list NFT: ${error.message}`);

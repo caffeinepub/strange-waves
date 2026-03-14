@@ -222,7 +222,7 @@ export function WalletDisplay() {
   const { data: listings = [] } = useGetListings();
   const listedTokenIds = new Set(listings.map((l) => l.tokenId.toString()));
   const [listForSaleState, setListForSaleState] = useState<{
-    tokenId: bigint;
+    tokenIds: bigint[];
     title: string;
   } | null>(null);
 
@@ -501,7 +501,7 @@ export function WalletDisplay() {
                     className="text-xs text-primary hover:underline flex items-center gap-1"
                     onClick={() =>
                       setListForSaleState({
-                        tokenId,
+                        tokenIds: [tokenId],
                         title: nft.metadata.title,
                       })
                     }
@@ -1112,7 +1112,7 @@ export function WalletDisplay() {
         <ListForSaleDialog
           open={!!listForSaleState}
           onOpenChange={(open) => !open && setListForSaleState(null)}
-          tokenId={listForSaleState.tokenId}
+          collectionTokenIds={listForSaleState.tokenIds}
           nftTitle={listForSaleState.title}
         />
       )}
