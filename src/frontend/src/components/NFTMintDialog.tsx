@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Principal } from "@dfinity/principal";
 import {
   Crown,
   DollarSign,
@@ -160,12 +161,20 @@ export function NFTMintDialog({
     }, 0);
     if (Math.abs(totalPercentage - 100) > 0.01) return;
 
-    const revenueSplitsFormatted: RevenueSplit[] = revenueSplits
-      .filter((split) => split.address.trim() !== "")
-      .map((split) => ({
-        address: split.address.trim() as any,
-        percentage: BigInt(Math.round(Number.parseFloat(split.percentage))),
-      }));
+    // Convert address strings to Principal objects with validation
+    let revenueSplitsFormatted: RevenueSplit[];
+    try {
+      revenueSplitsFormatted = revenueSplits
+        .filter((split) => split.address.trim() !== "")
+        .map((split) => ({
+          address: Principal.fromText(split.address.trim()),
+          percentage: BigInt(Math.round(Number.parseFloat(split.percentage))),
+        }));
+    } catch (_e) {
+      throw new Error(
+        "Invalid principal address in revenue splits. Please check the format (e.g. xxxxx-xxxxx-...-cai).",
+      );
+    }
     if (revenueSplitsFormatted.length === 0) return;
 
     // For ICP payments, store the ICP equivalent price; otherwise store USD price
