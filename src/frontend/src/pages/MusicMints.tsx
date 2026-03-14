@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Principal } from "@icp-sdk/core/principal";
@@ -135,6 +134,12 @@ export function MusicMints() {
 
   // Build a set of listed tokenIds for quick lookup
   const listedTokenIds = new Set(listings.map((l) => l.tokenId.toString()));
+
+  // Build a map from tokenId -> NFTRecord for enriching marketplace listings
+  const nftRecordMap = new Map<string, NFTRecordWithParams>();
+  for (const r of nftRecords || []) {
+    nftRecordMap.set(r.tokenId.toString(), r);
+  }
 
   const formatDate = (timestamp: bigint) => {
     const date = new Date(Number(timestamp) / 1000000);
@@ -373,6 +378,11 @@ export function MusicMints() {
       myPrincipal && listing.seller.toString() === myPrincipal;
     const priceIcp = (Number(listing.priceE8s) / 1e8).toFixed(4);
 
+    // Look up the full NFT record for cover art
+    const nftRecord = nftRecordMap.get(listing.tokenId.toString());
+    const imageUrl = nftRecord?.imageBlob?.getDirectURL();
+    const audioAvailable = !!nftRecord?.audioBlob;
+
     const getListingFileIcon = () => {
       if ("audio" in listing.fileType)
         return <Music className="h-10 w-10 text-primary/60" />;
@@ -390,16 +400,44 @@ export function MusicMints() {
     return (
       <Card
         data-ocid={`marketplace.item.${cardIndex + 1}`}
-        className="overflow-hidden border-border/60 hover:shadow-md transition-shadow"
+        className="overflow-hidden border-border/60 hover:shadow-lg transition-all cursor-pointer group"
+        onClick={() => {
+          if (nftRecord) {
+            setSelectedNFT({ record: nftRecord, tokenId: listing.tokenId });
+          }
+        }}
       >
-        <div className="aspect-square bg-gradient-to-br from-primary/10 via-accent/10 to-muted flex items-center justify-center relative">
-          {getListingFileIcon()}
+        {/* Cover art or gradient placeholder */}
+        <div className="relative aspect-square overflow-hidden">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={listing.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/10 via-accent/10 to-muted flex items-center justify-center">
+              {getListingFileIcon()}
+            </div>
+          )}
+          {/* Audio indicator */}
+          {audioAvailable && (
+            <div className="absolute bottom-2 left-2">
+              <Badge className="bg-black/60 text-white border-0 text-xs backdrop-blur-sm gap-1">
+                <Music className="h-3 w-3" />
+                Preview
+              </Badge>
+            </div>
+          )}
           <div className="absolute top-2 right-2">
             <ListingBadge priceE8s={listing.priceE8s} />
           </div>
           {isMyListing && (
             <div className="absolute top-2 left-2">
-              <Badge variant="outline" className="text-xs">
+              <Badge
+                variant="outline"
+                className="text-xs bg-background/80 backdrop-blur-sm"
+              >
                 Your Listing
               </Badge>
             </div>
@@ -446,13 +484,14 @@ export function MusicMints() {
                 data-ocid={`marketplace.buy.button.${cardIndex + 1}`}
                 size="sm"
                 disabled={buyMutation.isPending}
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   setConfirmPurchase({
                     tokenId: listing.tokenId,
                     title: listing.title,
                     priceE8s: listing.priceE8s,
-                  })
-                }
+                  });
+                }}
                 className="bg-primary hover:bg-primary/90"
               >
                 {buyMutation.isPending ? (
@@ -460,16 +499,24 @@ export function MusicMints() {
                 ) : (
                   <>
                     <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
-                    Buy for {priceIcp} ICP
+                    Buy Now
                   </>
                 )}
               </Button>
             ) : (
-              <Button size="sm" variant="outline" disabled>
-                Sign in to claim
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                onClick={(e) => e.stopPropagation()}
+              >
+                Sign in to buy
               </Button>
             )}
           </div>
+          <p className="text-xs text-muted-foreground/60 text-center pt-1">
+            Tap card for full details
+          </p>
         </CardContent>
       </Card>
     );
@@ -523,8 +570,6 @@ export function MusicMints() {
     </div>
   );
 
-  const tabCount = isAuthenticated ? 6 : 5;
-
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -545,46 +590,64 @@ export function MusicMints() {
         </AlertDescription>
       </Alert>
 
-      {/* NFT Tabs */}
+      {/* NFT Tabs — horizontally scrollable on mobile */}
       <Tabs defaultValue="marketplace" className="w-full mb-12">
-        <ScrollArea className="w-full">
+        <div className="overflow-x-auto -mx-4 px-4 pb-1 mb-6">
           <TabsList
-            className={`inline-flex w-auto min-w-full mb-8 grid-cols-${tabCount}`}
+            data-ocid="music_mints.tabs"
+            className="inline-flex w-max gap-0.5 h-auto p-1"
           >
             <TabsTrigger
               data-ocid="music_mints.marketplace.tab"
               value="marketplace"
-              className="flex items-center gap-1.5"
+              className="flex items-center gap-1.5 whitespace-nowrap"
             >
               <Store className="h-3.5 w-3.5" />
               Marketplace ({listings.length})
             </TabsTrigger>
-            <TabsTrigger data-ocid="music_mints.all.tab" value="all">
+            <TabsTrigger
+              data-ocid="music_mints.all.tab"
+              value="all"
+              className="whitespace-nowrap"
+            >
               All NFTs ({nftRecords?.length || 0})
             </TabsTrigger>
-            <TabsTrigger data-ocid="music_mints.audio.tab" value="audio">
-              <Music className="h-4 w-4 mr-1.5" />
+            <TabsTrigger
+              data-ocid="music_mints.audio.tab"
+              value="audio"
+              className="flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Music className="h-3.5 w-3.5" />
               Audio ({audioOnlyNFTs.length})
             </TabsTrigger>
-            <TabsTrigger data-ocid="music_mints.image.tab" value="image">
-              <ImageIcon className="h-4 w-4 mr-1.5" />
+            <TabsTrigger
+              data-ocid="music_mints.image.tab"
+              value="image"
+              className="flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
               Art ({albumArtOnlyNFTs.length})
             </TabsTrigger>
-            <TabsTrigger data-ocid="music_mints.combined.tab" value="combined">
-              <Package className="h-4 w-4 mr-1.5" />
+            <TabsTrigger
+              data-ocid="music_mints.combined.tab"
+              value="combined"
+              className="flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Package className="h-3.5 w-3.5" />
               Combined ({combinedNFTs.length})
             </TabsTrigger>
             {isAuthenticated && (
               <TabsTrigger
                 value="my-mints"
                 data-ocid="music_mints.my_mints.tab"
+                className="flex items-center gap-1.5 whitespace-nowrap"
               >
-                <User className="h-4 w-4 mr-1.5" />
+                <User className="h-3.5 w-3.5" />
                 My NFTs ({myNFTs.length})
               </TabsTrigger>
             )}
           </TabsList>
-        </ScrollArea>
+        </div>
 
         {/* MARKETPLACE TAB */}
         <TabsContent value="marketplace">
