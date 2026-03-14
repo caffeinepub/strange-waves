@@ -17,7 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Principal } from "@icp-sdk/core/principal";
@@ -41,7 +40,7 @@ import {
 import { useState } from "react";
 import {
   FileType,
-  type NFTRecordWithParams,
+  type NFTRecordWithParamsView as NFTRecordWithParams,
   type StableCoin,
 } from "../backend";
 
@@ -77,27 +76,32 @@ function groupNFTsByTitle(nfts: NFTRecordWithParams[]) {
     {
       record: NFTRecordWithParams;
       count: number;
-      globalIndex: number;
-      allIndices: number[];
+      tokenId: bigint;
+      allTokenIds: bigint[];
     }
   >();
-  nfts.forEach((nft, i) => {
+  for (const nft of nfts) {
     const key = nft.metadata.title;
     if (!map.has(key))
-      map.set(key, { record: nft, count: 1, globalIndex: i, allIndices: [i] });
+      map.set(key, {
+        record: nft,
+        count: 1,
+        tokenId: nft.tokenId,
+        allTokenIds: [nft.tokenId],
+      });
     else {
       const entry = map.get(key)!;
       entry.count += 1;
-      entry.allIndices.push(i);
+      entry.allTokenIds.push(nft.tokenId);
     }
-  });
+  }
   return Array.from(map.values());
 }
 
 export function MusicMints() {
   const [selectedNFT, setSelectedNFT] = useState<{
     record: NFTRecordWithParams;
-    index: number;
+    tokenId: bigint;
   } | null>(null);
   const [isEditExpanded, setIsEditExpanded] = useState(false);
   const [listForSaleState, setListForSaleState] = useState<{
@@ -131,10 +135,6 @@ export function MusicMints() {
 
   // Build a set of listed tokenIds for quick lookup
   const listedTokenIds = new Set(listings.map((l) => l.tokenId.toString()));
-
-  const handleCloseDialog = () => {
-    setSelectedNFT(null);
-  };
 
   const formatDate = (timestamp: bigint) => {
     const date = new Date(Number(timestamp) / 1000000);
@@ -173,18 +173,17 @@ export function MusicMints() {
   // ===== NFT CARD =====
   const NFTCard = ({
     record,
-    index,
     count = 1,
-  }: { record: NFTRecordWithParams; index: number; count?: number }) => {
-    const tokenId = BigInt(index);
+  }: { record: NFTRecordWithParams; count?: number }) => {
+    const tokenId = record.tokenId;
     const isListed = listedTokenIds.has(tokenId.toString());
 
     return (
       <Card
-        key={index}
-        data-ocid={`nft.item.${index + 1}`}
+        key={tokenId.toString()}
+        data-ocid={`nft.item.${tokenId.toString()}`}
         className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group border-border/60"
-        onClick={() => setSelectedNFT({ record, index })}
+        onClick={() => setSelectedNFT({ record, tokenId })}
       >
         {record.imageBlob ? (
           <div className="relative overflow-hidden aspect-square bg-muted">
@@ -262,7 +261,7 @@ export function MusicMints() {
             {formatPrice(record.params.price, record.params.stableCoin)}
           </p>
           <p className="text-xs font-mono text-muted-foreground">
-            Token #{index}
+            Token #{tokenId.toString()}
           </p>
         </CardContent>
       </Card>
@@ -272,21 +271,19 @@ export function MusicMints() {
   // ===== MY NFT CARD (with list/delist actions) =====
   const MyNFTCard = ({
     record,
-    index,
     count = 1,
-    allIndices = [],
+    allTokenIds = [],
   }: {
     record: NFTRecordWithParams;
-    index: number;
     count?: number;
-    allIndices?: number[];
+    allTokenIds?: bigint[];
   }) => {
-    const tokenId = BigInt(index);
+    const tokenId = record.tokenId;
     const isListed = listedTokenIds.has(tokenId.toString());
 
     return (
       <Card
-        data-ocid={`nft.my.item.${index + 1}`}
+        data-ocid={`nft.my.item.${tokenId.toString()}`}
         className="overflow-hidden border-border/60"
       >
         <CardContent className="p-4">
@@ -329,7 +326,7 @@ export function MusicMints() {
                 {record.metadata.artist}
               </p>
               <p className="text-xs font-mono text-muted-foreground mt-1">
-                Token #{index}
+                Token #{tokenId.toString()}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="secondary" className="text-xs">
@@ -346,16 +343,13 @@ export function MusicMints() {
               />
             ) : (
               <Button
-                data-ocid={`nft.my.list_for_sale.button.${index + 1}`}
+                data-ocid={`nft.my.list_for_sale.button.${tokenId.toString()}`}
                 size="sm"
                 variant="outline"
                 className="border-primary/40 text-primary hover:bg-primary/10"
                 onClick={() =>
                   setListForSaleState({
-                    tokenIds:
-                      allIndices.length > 0
-                        ? allIndices.map((i) => BigInt(i))
-                        : [tokenId],
+                    tokenIds: allTokenIds.length > 0 ? allTokenIds : [tokenId],
                     title: record.metadata.title,
                   })
                 }
@@ -501,11 +495,10 @@ export function MusicMints() {
     }
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {groupNFTsByTitle(nfts).map(({ record, count, globalIndex }) => (
+        {groupNFTsByTitle(nfts).map(({ record, count }) => (
           <NFTCard
-            key={`${record.metadata.title}-grouped`}
+            key={record.tokenId.toString()}
             record={record}
-            index={globalIndex}
             count={count}
           />
         ))}
@@ -666,13 +659,12 @@ export function MusicMints() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupNFTsByTitle(myNFTs).map(
-                  ({ record, count, globalIndex, allIndices }) => (
+                  ({ record, count, allTokenIds }) => (
                     <MyNFTCard
-                      key={`${record.metadata.title}-grouped`}
+                      key={record.tokenId.toString()}
                       record={record}
-                      index={globalIndex}
                       count={count}
-                      allIndices={allIndices}
+                      allTokenIds={allTokenIds}
                     />
                   ),
                 )}
@@ -725,16 +717,14 @@ export function MusicMints() {
       {selectedNFT && (
         <NFTDetailModal
           open={!!selectedNFT}
-          onOpenChange={(open) => !open && handleCloseDialog()}
+          onOpenChange={(open) => !open && setSelectedNFT(null)}
           nft={selectedNFT.record}
-          tokenId={BigInt(selectedNFT.index)}
+          tokenId={selectedNFT.tokenId}
           currentUserPrincipal={myPrincipal}
-          listing={listings.find(
-            (l) => l.tokenId === BigInt(selectedNFT.index),
-          )}
+          listing={listings.find((l) => l.tokenId === selectedNFT.tokenId)}
           isAuthenticated={isAuthenticated}
           onRequestBuy={(tokenId, title, priceE8s) => {
-            handleCloseDialog();
+            setSelectedNFT(null);
             setConfirmPurchase({ tokenId, title, priceE8s });
           }}
         />

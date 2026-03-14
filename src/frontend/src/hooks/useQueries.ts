@@ -12,6 +12,7 @@ import type {
   NFTParameters,
   NFTRecord,
   NFTRecordWithParams,
+  NFTRecordWithParamsView,
   PlaylistView,
   RevenueSplit,
   StableCoin,
@@ -305,6 +306,10 @@ export function useDeleteAudioFile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["audioFiles"] });
+      queryClient.invalidateQueries({ queryKey: ["nftRecordsWithParams"] });
+      queryClient.invalidateQueries({
+        queryKey: ["callerNFTRecordsWithParams"],
+      });
       toast.success("Audio file deleted successfully");
     },
     onError: (error: Error) => {
@@ -478,7 +483,7 @@ export function useNFTRecords() {
 export function useNFTRecordsWithParams() {
   const { actor, isFetching } = useActor();
 
-  return useQuery<NFTRecordWithParams[]>({
+  return useQuery<NFTRecordWithParamsView[]>({
     queryKey: ["nftRecordsWithParams"],
     queryFn: async () => {
       if (!actor) return [];
@@ -488,9 +493,22 @@ export function useNFTRecordsWithParams() {
   });
 }
 
-// Aliases for backward compatibility
-export const useCallerNFTRecordsWithParams = useNFTRecordsWithParams;
+// useAllNFTRecordsWithParams = all NFTs (public)
 export const useAllNFTRecordsWithParams = useNFTRecordsWithParams;
+
+// useCallerNFTRecordsWithParams = only the signed-in user's NFTs
+export function useCallerNFTRecordsWithParams() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<NFTRecordWithParamsView[]>({
+    queryKey: ["callerNFTRecordsWithParams"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getCallerNFTRecordsWithParams();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
 
 export function usePlaylists() {
   const { actor, isFetching } = useActor();

@@ -117,6 +117,13 @@ export interface NFTRecordWithParams {
     audioBlob?: ExternalBlob;
     params: NFTParameters;
 }
+export interface NFTRecordWithParamsView {
+    tokenId: bigint;
+    imageBlob?: ExternalBlob;
+    metadata: NFTMetadata;
+    audioBlob?: ExternalBlob;
+    params: NFTParameters;
+}
 export interface _CaffeineStorageCreateCertificateResult {
     method: string;
     blob_hash: string;
@@ -319,18 +326,18 @@ export interface backendInterface {
     getAlbum(id: string): Promise<AlbumView | null>;
     getAllAudioFiles(): Promise<Array<AudioFile>>;
     getAllNFTRecords(): Promise<Array<NFTRecord>>;
-    getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
+    getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>>;
     getAllPlaylists(): Promise<Array<PlaylistView>>;
     getAudioFile(id: string): Promise<AudioFile | null>;
     getAudioFilesByAlbum(albumId: string): Promise<Array<AudioFile>>;
     getCallerAudioFiles(): Promise<Array<AudioFile>>;
-    getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
+    getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>>;
     getCallerPlaylists(): Promise<Array<PlaylistView>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCanisterId(): Promise<Principal>;
     getNFTRecord(nftId: bigint): Promise<NFTRecord | null>;
-    getNFTRecordWithParams(nftId: bigint): Promise<NFTRecordWithParams | null>;
+    getNFTRecordWithParams(nftId: bigint): Promise<NFTRecordWithParamsView | null>;
     getPlaylist(id: string): Promise<PlaylistView | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
@@ -351,7 +358,7 @@ export interface backendInterface {
     ownerOf(tokenId: bigint): Promise<Principal | null>;
     transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult>;
 }
-import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, NFTRecordWithParamsView as _NFTRecordWithParamsView, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -620,7 +627,7 @@ export class Backend implements backendInterface {
             return from_candid_vec_n20(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>> {
+    async getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllNFTRecordsWithParams();
@@ -690,7 +697,7 @@ export class Backend implements backendInterface {
             return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>> {
+    async getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerNFTRecordsWithParams();
@@ -774,7 +781,7 @@ export class Backend implements backendInterface {
             return from_candid_opt_n40(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getNFTRecordWithParams(arg0: bigint): Promise<NFTRecordWithParams | null> {
+    async getNFTRecordWithParams(arg0: bigint): Promise<NFTRecordWithParamsView | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getNFTRecordWithParams(arg0);
@@ -1019,7 +1026,7 @@ function from_candid_NFTMetadata_n23(_uploadFile: (file: ExternalBlob) => Promis
 function from_candid_NFTParameters_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTParameters): NFTParameters {
     return from_candid_record_n31(_uploadFile, _downloadFile, value);
 }
-async function from_candid_NFTRecordWithParams_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecordWithParams): Promise<NFTRecordWithParams> {
+async function from_candid_NFTRecordWithParams_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecordWithParamsView): Promise<NFTRecordWithParamsView> {
     return await from_candid_record_n29(_uploadFile, _downloadFile, value);
 }
 async function from_candid_NFTRecord_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _NFTRecord): Promise<NFTRecord> {
@@ -1155,17 +1162,14 @@ function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uin
     };
 }
 async function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    tokenId: bigint;
     imageBlob: [] | [_ExternalBlob];
     metadata: _NFTMetadata;
     audioBlob: [] | [_ExternalBlob];
     params: _NFTParameters;
-}): Promise<{
-    imageBlob?: ExternalBlob;
-    metadata: NFTMetadata;
-    audioBlob?: ExternalBlob;
-    params: NFTParameters;
-}> {
+}): Promise<NFTRecordWithParamsView> {
     return {
+        tokenId: value.tokenId,
         imageBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.imageBlob)),
         metadata: from_candid_NFTMetadata_n23(_uploadFile, _downloadFile, value.metadata),
         audioBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.audioBlob)),
@@ -1340,7 +1344,7 @@ async function from_candid_vec_n11(_uploadFile: (file: ExternalBlob) => Promise<
 async function from_candid_vec_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecord>): Promise<Array<NFTRecord>> {
     return await Promise.all(value.map(async (x)=>await from_candid_NFTRecord_n21(_uploadFile, _downloadFile, x)));
 }
-async function from_candid_vec_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecordWithParams>): Promise<Array<NFTRecordWithParams>> {
+async function from_candid_vec_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_NFTRecordWithParamsView>): Promise<Array<NFTRecordWithParamsView>> {
     return await Promise.all(value.map(async (x)=>await from_candid_NFTRecordWithParams_n28(_uploadFile, _downloadFile, x)));
 }
 async function to_candid_AudioFile_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AudioFile): Promise<_AudioFile> {

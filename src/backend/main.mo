@@ -146,6 +146,15 @@ actor {
     params : NFTParameters;
   };
 
+  // View type returned by queries — includes tokenId but is NOT stored
+  public type NFTRecordWithParamsView = {
+    tokenId : Nat;
+    audioBlob : ?Storage.ExternalBlob;
+    imageBlob : ?Storage.ExternalBlob;
+    metadata : NFTMetadata;
+    params : NFTParameters;
+  };
+
   public type MintNFTWithParamsRequest = {
     audioBlob : ?Storage.ExternalBlob;
     imageBlob : ?Storage.ExternalBlob;
@@ -328,14 +337,13 @@ actor {
       };
     };
 
+    let nftId = nftWithParamsCounter;
     let record : NFTRecordWithParams = {
       audioBlob = request.audioBlob;
       imageBlob = request.imageBlob;
       metadata = metadata;
       params = request.params;
     };
-
-    let nftId = nftWithParamsCounter;
     nftRecordsWithParams.add(nftId, record);
     // Record initial ownership in the ownership map
     nftOwnership.add(nftId, caller);
@@ -344,15 +352,22 @@ actor {
     #ok(nftId);
   };
 
-  public query func getNFTRecordWithParams(nftId : Nat) : async ?NFTRecordWithParams {
-    nftRecordsWithParams.get(nftId);
+  public query func getNFTRecordWithParams(nftId : Nat) : async ?NFTRecordWithParamsView {
+    switch (nftRecordsWithParams.get(nftId)) {
+      case (?record) { ?{ record with tokenId = nftId } };
+      case (null) { null };
+    };
   };
 
-  public query func getAllNFTRecordsWithParams() : async [NFTRecordWithParams] {
-    nftRecordsWithParams.values().toArray();
+  public query func getAllNFTRecordsWithParams() : async [NFTRecordWithParamsView] {
+    nftRecordsWithParams.entries()
+      .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParamsView {
+        { entry.1 with tokenId = entry.0 }
+      })
+      .toArray();
   };
 
-  public query ({ caller }) func getCallerNFTRecordsWithParams() : async [NFTRecordWithParams] {
+  public query ({ caller }) func getCallerNFTRecordsWithParams() : async [NFTRecordWithParamsView] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can view their NFTs");
     };
@@ -366,7 +381,9 @@ actor {
           case (null) { record.metadata.owner == caller };
         };
       })
-      .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParams { entry.1 })
+      .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParamsView {
+        { entry.1 with tokenId = entry.0 }
+      })
       .toArray();
   };
 

@@ -131,6 +131,13 @@ export const NFTRecordWithParams = IDL.Record({
   'audioBlob' : IDL.Opt(ExternalBlob),
   'params' : NFTParameters,
 });
+export const NFTRecordWithParamsView = IDL.Record({
+  'tokenId' : IDL.Nat,
+  'imageBlob' : IDL.Opt(ExternalBlob),
+  'metadata' : NFTMetadata,
+  'audioBlob' : IDL.Opt(ExternalBlob),
+  'params' : NFTParameters,
+});
 export const UserProfile = IDL.Record({
   'bio' : IDL.Opt(IDL.Text),
   'name' : IDL.Text,
@@ -232,7 +239,7 @@ export const idlService = IDL.Service({
   'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
   'getAllNFTRecordsWithParams' : IDL.Func(
       [],
-      [IDL.Vec(NFTRecordWithParams)],
+      [IDL.Vec(NFTRecordWithParamsView)],
       ['query'],
     ),
   'getAllPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
@@ -245,7 +252,7 @@ export const idlService = IDL.Service({
   'getCallerAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
   'getCallerNFTRecordsWithParams' : IDL.Func(
       [],
-      [IDL.Vec(NFTRecordWithParams)],
+      [IDL.Vec(NFTRecordWithParamsView)],
       ['query'],
     ),
   'getCallerPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
@@ -255,7 +262,7 @@ export const idlService = IDL.Service({
   'getNFTRecord' : IDL.Func([IDL.Nat], [IDL.Opt(NFTRecord)], ['query']),
   'getNFTRecordWithParams' : IDL.Func(
       [IDL.Nat],
-      [IDL.Opt(NFTRecordWithParams)],
+      [IDL.Opt(NFTRecordWithParamsView)],
       ['query'],
     ),
   'getPlaylist' : IDL.Func([IDL.Text], [IDL.Opt(PlaylistView)], ['query']),
@@ -417,6 +424,13 @@ export const idlFactory = ({ IDL }) => {
     'audioBlob' : IDL.Opt(ExternalBlob),
     'params' : NFTParameters,
   });
+  const NFTRecordWithParamsView = IDL.Record({
+    'tokenId' : IDL.Nat,
+    'imageBlob' : IDL.Opt(ExternalBlob),
+    'metadata' : NFTMetadata,
+    'audioBlob' : IDL.Opt(ExternalBlob),
+    'params' : NFTParameters,
+  });
   const UserProfile = IDL.Record({
     'bio' : IDL.Opt(IDL.Text),
     'name' : IDL.Text,
@@ -518,7 +532,7 @@ export const idlFactory = ({ IDL }) => {
     'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
     'getAllNFTRecordsWithParams' : IDL.Func(
         [],
-        [IDL.Vec(NFTRecordWithParams)],
+        [IDL.Vec(NFTRecordWithParamsView)],
         ['query'],
       ),
     'getAllPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
@@ -531,7 +545,7 @@ export const idlFactory = ({ IDL }) => {
     'getCallerAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
     'getCallerNFTRecordsWithParams' : IDL.Func(
         [],
-        [IDL.Vec(NFTRecordWithParams)],
+        [IDL.Vec(NFTRecordWithParamsView)],
         ['query'],
       ),
     'getCallerPlaylists' : IDL.Func([], [IDL.Vec(PlaylistView)], ['query']),
@@ -541,7 +555,7 @@ export const idlFactory = ({ IDL }) => {
     'getNFTRecord' : IDL.Func([IDL.Nat], [IDL.Opt(NFTRecord)], ['query']),
     'getNFTRecordWithParams' : IDL.Func(
         [IDL.Nat],
-        [IDL.Opt(NFTRecordWithParams)],
+        [IDL.Opt(NFTRecordWithParamsView)],
         ['query'],
       ),
     'getPlaylist' : IDL.Func([IDL.Text], [IDL.Opt(PlaylistView)], ['query']),

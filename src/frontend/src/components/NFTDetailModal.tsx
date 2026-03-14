@@ -22,7 +22,10 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { NFTRecordWithParams, StableCoin } from "../backend";
+import type {
+  NFTRecordWithParamsView as NFTRecordWithParams,
+  StableCoin,
+} from "../backend";
 import { FileType } from "../backend";
 
 export interface NFTAttachment {

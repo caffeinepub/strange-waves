@@ -39,6 +39,13 @@ export interface NFTRecordWithParams {
     audioBlob?: ExternalBlob;
     params: NFTParameters;
 }
+export interface NFTRecordWithParamsView {
+    tokenId: bigint;
+    imageBlob?: ExternalBlob;
+    metadata: NFTMetadata;
+    audioBlob?: ExternalBlob;
+    params: NFTParameters;
+}
 export type Genre = {
     __kind__: "pop";
     pop: null;
@@ -226,18 +233,18 @@ export interface backendInterface {
     getAlbum(id: string): Promise<AlbumView | null>;
     getAllAudioFiles(): Promise<Array<AudioFile>>;
     getAllNFTRecords(): Promise<Array<NFTRecord>>;
-    getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
+    getAllNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>>;
     getAllPlaylists(): Promise<Array<PlaylistView>>;
     getAudioFile(id: string): Promise<AudioFile | null>;
     getAudioFilesByAlbum(albumId: string): Promise<Array<AudioFile>>;
     getCallerAudioFiles(): Promise<Array<AudioFile>>;
-    getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParams>>;
+    getCallerNFTRecordsWithParams(): Promise<Array<NFTRecordWithParamsView>>;
     getCallerPlaylists(): Promise<Array<PlaylistView>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCanisterId(): Promise<Principal>;
     getNFTRecord(nftId: bigint): Promise<NFTRecord | null>;
-    getNFTRecordWithParams(nftId: bigint): Promise<NFTRecordWithParams | null>;
+    getNFTRecordWithParams(nftId: bigint): Promise<NFTRecordWithParamsView | null>;
     getPlaylist(id: string): Promise<PlaylistView | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
