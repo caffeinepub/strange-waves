@@ -979,10 +979,13 @@ export class Backend implements backendInterface {
     }
     async getListings(): Promise<Array<NFTListing>> {
         const results = await (this.actor as any).getListings();
-        return results.map((item: any) => ({
-            ...item,
-            fileType: Object.keys(item.fileType)[0] as FileType,
-        }));
+        return results.map((item: any) => {
+            const ftKey = Object.keys(item.fileType)[0];
+            return {
+                ...item,
+                fileType: { [ftKey]: null } as { audio: null } | { image: null } | { combined: null },
+            };
+        });
     }
     async listNFTForSale(tokenId: bigint, priceE8s: bigint): Promise<NFTTransferResult> {
         const result = await (this.actor as any).listNFTForSale(tokenId, priceE8s);
