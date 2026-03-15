@@ -42,6 +42,7 @@ type GenreKey =
   | "hipHop"
   | "electronic"
   | "classical"
+  | "spirit"
   | "other";
 
 const GENRE_OPTIONS: { value: GenreKey; label: string }[] = [
@@ -51,10 +52,11 @@ const GENRE_OPTIONS: { value: GenreKey; label: string }[] = [
   { value: "hipHop", label: "Hip-Hop" },
   { value: "electronic", label: "Electronic" },
   { value: "classical", label: "Classical" },
+  { value: "spirit", label: "Spirit" },
   { value: "other", label: "Other" },
 ];
 
-function genreKeyToValue(key: GenreKey): Genre {
+function genreKeyToValue(key: GenreKey, customLabel?: string): Genre {
   switch (key) {
     case "pop":
       return { __kind__: "pop", pop: null };
@@ -68,8 +70,10 @@ function genreKeyToValue(key: GenreKey): Genre {
       return { __kind__: "electronic", electronic: null };
     case "classical":
       return { __kind__: "classical", classical: null };
+    case "spirit":
+      return { __kind__: "other", other: "Spirit" };
     case "other":
-      return { __kind__: "other", other: "Other" };
+      return { __kind__: "other", other: customLabel || "Other" };
   }
 }
 
@@ -84,6 +88,7 @@ export function AudioUploader() {
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<GenreKey>("other");
+  const [customGenreLabel, setCustomGenreLabel] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -227,7 +232,10 @@ export function AudioUploader() {
       const size = audioFile.size;
       const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      const genreValue: Genre = genreKeyToValue(selectedGenre);
+      const genreValue: Genre = genreKeyToValue(
+        selectedGenre,
+        customGenreLabel,
+      );
 
       let coverImageData: Uint8Array | undefined = undefined;
       if (imageFile) {
@@ -259,6 +267,7 @@ export function AudioUploader() {
       setTitle("");
       setCreator("");
       setSelectedGenre("other");
+      setCustomGenreLabel("");
       setIsPublic(true);
       setUploadProgress(0);
       setUploadedAudioFile(null);
@@ -461,7 +470,10 @@ export function AudioUploader() {
               <Label htmlFor="genre">Genre</Label>
               <Select
                 value={selectedGenre}
-                onValueChange={(v) => setSelectedGenre(v as GenreKey)}
+                onValueChange={(v) => {
+                  setSelectedGenre(v as GenreKey);
+                  if (v !== "other") setCustomGenreLabel("");
+                }}
                 disabled={!isActorReady}
               >
                 <SelectTrigger id="genre" data-ocid="uploader.genre.select">
@@ -475,6 +487,21 @@ export function AudioUploader() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Custom genre input — shown only when "Other" is selected */}
+              {selectedGenre === "other" && (
+                <div className="pt-1">
+                  <Input
+                    id="custom-genre"
+                    value={customGenreLabel}
+                    onChange={(e) => setCustomGenreLabel(e.target.value)}
+                    placeholder="Enter your genre..."
+                    disabled={!isActorReady}
+                    data-ocid="uploader.genre.input"
+                    className="text-sm"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">

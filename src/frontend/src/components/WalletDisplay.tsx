@@ -49,6 +49,7 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCallerNFTRecordsWithParams,
   useGetListings,
+  useTransferNFT,
 } from "../hooks/useQueries";
 import {
   DelistButton,
@@ -225,6 +226,12 @@ export function WalletDisplay() {
     tokenIds: bigint[];
     title: string;
   } | null>(null);
+  const [sendNFTState, setSendNFTState] = useState<{
+    tokenId: bigint;
+    title: string;
+  } | null>(null);
+  const [sendNFTRecipient, setSendNFTRecipient] = useState("");
+  const transferNFT = useTransferNFT();
 
   const loadICPBalance = useCallback(async () => {
     if (!identity) return;
@@ -495,20 +502,34 @@ export function WalletDisplay() {
                     nftTitle={nft.metadata.title}
                   />
                 ) : (
-                  <button
-                    type="button"
-                    data-ocid={`wallet.nft.list_for_sale.button.${index + 1}`}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                    onClick={() =>
-                      setListForSaleState({
-                        tokenIds: [tokenId],
-                        title: nft.metadata.title,
-                      })
-                    }
-                  >
-                    <Tag className="h-3 w-3" />
-                    List for Sale
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      data-ocid={`wallet.nft.list_for_sale.button.${index + 1}`}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                      onClick={() =>
+                        setListForSaleState({
+                          tokenIds: [tokenId],
+                          title: nft.metadata.title,
+                        })
+                      }
+                    >
+                      <Tag className="h-3 w-3" />
+                      List for Sale
+                    </button>
+                    <button
+                      type="button"
+                      data-ocid={`wallet.nft.send.button.${index + 1}`}
+                      className="text-xs text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
+                      onClick={() => {
+                        setSendNFTState({ tokenId, title: nft.metadata.title });
+                        setSendNFTRecipient("");
+                      }}
+                    >
+                      <Send className="h-3 w-3" />
+                      Send
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1115,6 +1136,97 @@ export function WalletDisplay() {
           collectionTokenIds={listForSaleState.tokenIds}
           nftTitle={listForSaleState.title}
         />
+      )}
+      {sendNFTState && (
+        <Dialog
+          open={!!sendNFTState}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSendNFTState(null);
+              setSendNFTRecipient("");
+            }
+          }}
+        >
+          <DialogContent data-ocid="wallet.send_nft.dialog">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Send NFT
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Sending:{" "}
+                <span className="font-medium text-foreground">
+                  {sendNFTState.title}
+                </span>
+              </p>
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3">
+                <p className="text-xs text-destructive">
+                  ⚠ This will permanently transfer ownership of the NFT to the
+                  recipient. This action cannot be undone.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="send-nft-recipient">
+                  Recipient Principal ID
+                </Label>
+                <Input
+                  id="send-nft-recipient"
+                  data-ocid="wallet.send_nft.recipient.input"
+                  placeholder="xxxxx-xxxxx-xxxxx-xxxxx-cai"
+                  value={sendNFTRecipient}
+                  onChange={(e) => setSendNFTRecipient(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the recipient's ICP Principal ID (not Account ID).
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                data-ocid="wallet.send_nft.cancel_button"
+                onClick={() => {
+                  setSendNFTState(null);
+                  setSendNFTRecipient("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                data-ocid="wallet.send_nft.confirm_button"
+                disabled={!sendNFTRecipient.trim() || transferNFT.isPending}
+                onClick={async () => {
+                  if (!sendNFTState) return;
+                  try {
+                    await transferNFT.mutateAsync({
+                      tokenId: sendNFTState.tokenId,
+                      to: sendNFTRecipient,
+                    });
+                    setSendNFTState(null);
+                    setSendNFTRecipient("");
+                    refetchNFTs();
+                  } catch {
+                    // error handled by mutation
+                  }
+                }}
+              >
+                {transferNFT.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Confirm Send
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

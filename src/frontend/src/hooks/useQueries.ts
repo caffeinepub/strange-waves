@@ -1008,3 +1008,33 @@ export function useBuyNFT() {
     },
   });
 }
+
+export function useTransferNFT() {
+  const { actor, isActorReady } = useActorReady();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tokenId, to }: { tokenId: bigint; to: string }) => {
+      if (!actor || !isActorReady) {
+        throw new Error("Actor not ready. Please wait or log in.");
+      }
+      const { Principal } = await import("@dfinity/principal");
+      const toPrincipal = Principal.fromText(to.trim());
+      const result = await actor.transferNFT(tokenId, toPrincipal as any);
+      if (result.__kind__ !== "ok") {
+        throw new Error(`Transfer failed: ${result.__kind__}`);
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["callerNFTRecordsWithParams"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["nftRecordsWithParams"] });
+      toast.success("NFT sent successfully!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to send NFT: ${error.message}`);
+    },
+  });
+}
