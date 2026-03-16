@@ -1,34 +1,30 @@
 # Strange Waves
 
 ## Current State
-The NFT marketplace "List for Sale" feature fails with `this.actor.listNFTForSale is not a function`. The backend Motoko canister has `listNFTForSale`, `delistNFT`, `getListings`, `buyNFT`, `ownerOf`, and `transferNFT` implemented, but these methods are missing from the IDL factory files (`backend.did.js` and `backend.did.d.ts`). This means the ICP actor is created without these methods, so they return "not a function" errors.
-
-Additionally, the `backend.ts` wrapper stubs pass the raw Candid variant result directly (e.g. `{ ok: null }`) but `useQueries.ts` checks `result.__kind__ === "ok"`, so results would be misread even if the call succeeded.
-
-The `ListForSaleDialog` only handles a single `tokenId`. For collections (multiple editions), there's no way to list a set quantity at once.
+The TrackPopupPlayer renders as a fixed panel (bottom-20, inset-x-4, max-w-md) with backdrop, controls, repeat/shuffle, and volume. It opens when a track card is clicked in AudioLibrary. There is no play count tracking, no "Add to Playlist" in the popup, and no share/link feature.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `NFTListing`, `ListNFTRawResult`, `TransferNFTRawResult`, `BuyNFTRawResult` IDL types in `backend.did.js` (both module-level and inside `idlFactory`)
-- `NFTListing` interface + `ListNFTRawResult`/`TransferNFTRawResult`/`BuyNFTRawResult` variant types in `backend.did.d.ts`
-- Marketplace methods to `_SERVICE` in `backend.did.d.ts`: `getListings`, `listNFTForSale`, `delistNFT`, `buyNFT`, `ownerOf`, `transferNFT`
-- Quantity input to `ListForSaleDialog` (1 to N where N = number of token IDs in the collection group)
-- `collectionTokenIds: bigint[]` prop to `ListForSaleDialog` replacing single `tokenId: bigint`
+- Mobile-responsive popup: ensure fully visible on mobile — adjust bottom offset for browser chrome, cap height with overflow scroll.
+- Play count metric: track per-track play counts in localStorage (key: sw_play_counts). Increment on play. Show headphones+count badge on track cards and in the popup.
+- Add to Playlist button: in the popup and on track cards. Opens a dropdown listing playlists; tapping one adds the track via useAddTrackToPlaylist.
+- Share button: in the popup. Copies `<origin>?track=<id>` to clipboard, shows "Link copied!" toast. On app mount, check ?track= param and auto-load that track.
 
 ### Modify
-- `backend.ts`: Fix marketplace method stubs to map raw Candid variants to `__kind__` format. `getListings` should map `fileType: { audio: null }` to `FileType.audio`. `ownerOf` should convert `[] | [Principal]` to `Principal | null`. Other methods should use `Object.keys(result)[0]` to extract the variant key as `__kind__`.
-- `backend.did.js`: Add NFTListing, ListNFTResponse, TransferNFTResponse, BuyNFTResponse IDL type definitions and add service methods to both `idlService` and `idlFactory` return value
-- `backend.did.d.ts`: Add types and service methods
-- `MusicMints.tsx`: Update `groupNFTsByTitle` to track all token IDs per group (not just the first). Update `listForSaleState` to use `tokenIds: bigint[]`. Pass all collection token IDs to `ListForSaleDialog`.
-- `NFTMarketplaceActions.tsx`: `ListForSaleDialog` accepts `collectionTokenIds: bigint[]`. Adds a "Quantity to List" numeric input (min 1, max = collectionTokenIds.length). On submit, loops through first N token IDs and calls `listMutation.mutateAsync` for each.
+- TrackPopupPlayer: add play count, Add to Playlist, and Share button.
+- AudioLibrary track cards: show play count badge, add Add to Playlist icon button.
+- AudioPlayerContext: call incrementPlay when audio starts playing.
 
 ### Remove
-Nothing removed.
+- Nothing.
 
 ## Implementation Plan
-1. Fix `backend.did.js`: add NFTListing record, ListNFTResponse/TransferNFTResponse/BuyNFTResponse variants, and the 6 service methods to both `idlService` and `idlFactory`
-2. Fix `backend.did.d.ts`: add NFTListing interface, raw result types, and methods to `_SERVICE`
-3. Fix `backend.ts`: update the 6 marketplace stubs to properly map Candid variants to `__kind__` objects
-4. Fix `NFTMarketplaceActions.tsx`: accept `collectionTokenIds` array + quantity input, loop on submit
-5. Fix `MusicMints.tsx`: track all tokenIds per group, pass them to `ListForSaleDialog`
+1. usePlayCounts hook — localStorage read/write helpers.
+2. Wire incrementPlay in AudioPlayerContext on play event.
+3. Add play count display to TrackPopupPlayer.
+4. Add Share button (copy URL + toast).
+5. Add to Playlist button in popup (popover with playlist list).
+6. Add play count badge + Add to Playlist button to track cards.
+7. Fix mobile positioning: bottom-24 on mobile, max-h-[85vh] overflow-y-auto.
+8. Auto-load track from ?track= URL param on mount.

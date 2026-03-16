@@ -10,11 +10,13 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { PersistentAudioPlayer } from "./components/PersistentAudioPlayer";
+import { TrackPopupPlayer } from "./components/TrackPopupPlayer";
 import {
   AudioPlayerProvider,
   useAudioPlayer,
 } from "./contexts/AudioPlayerContext";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { useAudioFiles } from "./hooks/useQueries";
 import {
   logComponentError,
   logComponentInit,
@@ -41,7 +43,23 @@ function AppContent() {
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
-  const { setTrack } = useAudioPlayer();
+  const { setTrack, openPopup, setTrackList } = useAudioPlayer();
+  const { data: audioFiles = [] } = useAudioFiles();
+
+  // Auto-load track from URL ?track= param on mount
+  useEffect(() => {
+    if (audioFiles.length === 0) return;
+    const trackId = new URLSearchParams(window.location.search).get("track");
+    if (!trackId) return;
+    const match = audioFiles.find((f) => f.id === trackId);
+    if (match) {
+      setTrackList(
+        audioFiles.map((f) => ({ source: "local" as const, data: f })),
+      );
+      setTrack({ source: "local", data: match });
+      openPopup();
+    }
+  }, [audioFiles, setTrack, openPopup, setTrackList]);
 
   const handleNavigate = (page: string) => {
     console.log("[App] Navigating to page:", page);
@@ -183,6 +201,7 @@ function AppContent() {
       <Header onNavigate={handleNavigate} />
       <main className="flex-1 pb-20">{renderPage()}</main>
       <PersistentAudioPlayer />
+      <TrackPopupPlayer />
       <Footer />
       <Toaster />
     </div>

@@ -1,5 +1,6 @@
 import { Slider } from "@/components/ui/slider";
 import {
+  ChevronUp,
   Cloud,
   Loader2,
   Music,
@@ -34,6 +35,7 @@ export function PersistentAudioPlayer() {
     seek,
     setVolume,
     toggleMute,
+    openPopup,
   } = useAudioPlayer();
 
   if (!currentTrack) return null;
@@ -122,15 +124,33 @@ export function PersistentAudioPlayer() {
         </div>
 
         <div className="flex items-center gap-3 px-4 py-2 md:gap-4">
-          {/* Artwork + track info */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div
+          {/* Expand button + artwork */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              data-ocid="persistent_player.expand_button"
+              onClick={openPopup}
+              className="flex h-7 w-7 items-center justify-center rounded-full transition-all hover:scale-110"
+              style={{
+                background: "oklch(0.18 0.06 175 / 0.6)",
+                border: "1px solid oklch(0.65 0.18 175 / 0.3)",
+                color: "oklch(0.65 0.18 175)",
+              }}
+              aria-label="Expand player"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
               className="h-10 w-10 flex-shrink-0 rounded-md overflow-hidden flex items-center justify-center"
               style={{
                 background:
                   "linear-gradient(135deg, oklch(0.18 0.10 175), oklch(0.14 0.07 200))",
                 border: "1px solid oklch(0.30 0.10 175 / 0.3)",
               }}
+              onClick={openPopup}
+              aria-label="Open track popup"
             >
               {artwork ? (
                 <img
@@ -144,31 +164,33 @@ export function PersistentAudioPlayer() {
                   style={{ color: "oklch(0.60 0.15 175)" }}
                 />
               )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                className="text-xs font-semibold truncate"
-                style={{ color: "oklch(0.92 0.04 200)" }}
-              >
-                {title}
-              </p>
-              <div className="flex items-center gap-1.5">
-                {artist && (
-                  <p
-                    className="text-xs truncate"
-                    style={{ color: "oklch(0.55 0.06 200)" }}
-                  >
-                    {artist}
-                  </p>
-                )}
-                <span
-                  className="flex items-center gap-0.5 text-xs flex-shrink-0"
-                  style={{ color: "oklch(0.45 0.06 200)" }}
+            </button>
+          </div>
+
+          {/* Track info */}
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-xs font-semibold truncate"
+              style={{ color: "oklch(0.92 0.04 200)" }}
+            >
+              {title}
+            </p>
+            <div className="flex items-center gap-1.5">
+              {artist && (
+                <p
+                  className="text-xs truncate"
+                  style={{ color: "oklch(0.55 0.06 200)" }}
                 >
-                  {sourceIcon}
-                  <span className="hidden sm:inline">{sourceLabel}</span>
-                </span>
-              </div>
+                  {artist}
+                </p>
+              )}
+              <span
+                className="flex items-center gap-0.5 text-xs flex-shrink-0"
+                style={{ color: "oklch(0.45 0.06 200)" }}
+              >
+                {sourceIcon}
+                <span className="hidden sm:inline">{sourceLabel}</span>
+              </span>
             </div>
           </div>
 

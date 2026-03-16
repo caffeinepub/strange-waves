@@ -12,10 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   GripVertical,
+  Headphones,
+  ListPlus,
   Loader2,
   Music,
   Search,
@@ -23,15 +30,20 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { AudioFile, Genre } from "../backend";
 import type { FileType } from "../backend";
+import { useAudioPlayer } from "../contexts/AudioPlayerContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { getPlayCount } from "../hooks/usePlayCounts";
 import {
   type CombinedAudio,
+  useAddTrackToPlaylist,
   useAudioFiles,
   useDeleteAudioFile,
   useIsCallerAdmin,
   useMintNFTWithParams,
+  usePlaylists,
   useSearchAudiusTracks,
 } from "../hooks/useQueries";
 import { MintSuccessBanner } from "./NFTMarketplaceActions";
@@ -76,9 +88,13 @@ export function AudioLibrary({
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
+  const { setTrackList, openPopup } = useAudioPlayer();
+
   const { data: localFiles = [], isLoading: isLoadingLocal } = useAudioFiles();
   const { data: isAdmin = false } = useIsCallerAdmin();
   const deleteMutation = useDeleteAudioFile();
+  const { data: playlists = [] } = usePlaylists();
+  const addToPlaylist = useAddTrackToPlaylist();
 
   // Drag-to-sort state
   const [localOrder, setLocalOrder] = useState<string[]>(() => {
@@ -97,9 +113,7 @@ export function AudioLibrary({
     if (localFiles.length === 0) return;
     setLocalOrder((prev) => {
       const existingIds = new Set(localFiles.map((f) => f.id));
-      // Filter out removed files
       const filtered = prev.filter((id) => existingIds.has(id));
-      // Add new files to the end
       const inOrder = new Set(filtered);
       const newIds = localFiles
         .map((f) => f.id)
@@ -156,7 +170,6 @@ export function AudioLibrary({
     setDeleteTargetId(null);
   };
 
-  // Only pass the query when on the audius tab and there's a search term; otherwise pass empty string
   const audiusQuery = activeTab === "audius" ? searchQuery : "";
   const { data: audiusResults = [], isLoading: isLoadingAudius } =
     useSearchAudiusTracks(audiusQuery);
@@ -234,7 +247,16 @@ export function AudioLibrary({
             className={`cursor-pointer transition-all hover:shadow-lg ${
               selectedAudioId === file.id ? "ring-2 ring-primary" : ""
             } ${isAdmin ? "relative" : ""}`}
-            onClick={() => onSelectAudio({ source: "local", data: file })}
+            onClick={() => {
+              setTrackList(
+                sortedLocalFiles.map((f) => ({
+                  source: "local" as const,
+                  data: f,
+                })),
+              );
+              openPopup();
+              onSelectAudio({ source: "local", data: file });
+            }}
           >
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
@@ -270,6 +292,54 @@ export function AudioLibrary({
                       {file.title}
                     </h3>
                     <div className="flex shrink-0 items-center gap-1">
+                      {/* Add to playlist */}
+                      {isAuthenticated && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0"
+                              data-ocid={`tracks.add_to_playlist_button.${idx + 1}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ListPlus className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-48 p-2"
+                            align="end"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <p className="text-xs font-medium text-muted-foreground px-2 pb-1">
+                              Add to Playlist
+                            </p>
+                            {playlists.length === 0 ? (
+                              <p className="text-xs text-muted-foreground px-2 py-1">
+                                No playlists yet
+                              </p>
+                            ) : (
+                              playlists.map((pl) => (
+                                <button
+                                  key={pl.id}
+                                  type="button"
+                                  className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent transition-colors"
+                                  onClick={() => {
+                                    addToPlaylist.mutate({
+                                      playlistId: pl.id,
+                                      trackId: file.id,
+                                    });
+                                    toast.success(`Added to ${pl.title}`);
+                                  }}
+                                >
+                                  {pl.title}
+                                </button>
+                              ))
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                      {/* Mint NFT */}
                       {isAuthenticated && (
                         <Button
                           size="sm"
@@ -321,6 +391,11 @@ export function AudioLibrary({
                         {formatGenre(file.genre)}
                       </Badge>
                     )}
+                    {/* Play count badge */}
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Headphones className="h-3 w-3" />
+                      {getPlayCount(file.id)}
+                    </Badge>
                   </div>
                 </div>
               </div>
