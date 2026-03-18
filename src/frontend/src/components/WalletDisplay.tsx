@@ -359,7 +359,16 @@ export function WalletDisplay() {
     try {
       // Dynamically import Principal to avoid top-level import issues
       const { Principal } = await import("@dfinity/principal");
-      const recipientPrincipal = Principal.fromText(sendRecipient.trim());
+      let recipientPrincipal: import("@dfinity/principal").Principal;
+      try {
+        recipientPrincipal = Principal.fromText(sendRecipient.trim());
+      } catch {
+        toast.error(
+          "Invalid recipient address. ICP Principal IDs only use letters a-z and digits 220137. If you have a 64-character hex address from an exchange, you need your Principal ID instead 2014 find it at nns.ic0.app",
+        );
+        setIsSending(false);
+        return;
+      }
       await sendICP(identity, recipientPrincipal, amount);
       toast.success("ICP sent successfully");
       setSendOpen(false);
@@ -683,6 +692,10 @@ export function WalletDisplay() {
                 className="font-mono text-sm"
                 disabled={isSending}
               />
+              <p className="text-xs text-muted-foreground">
+                Enter an ICP Principal ID (uses letters a–z and digits 2–7 only,
+                not 0, 1, 8, or 9).
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="send-amount">Amount (ICP)</Label>
@@ -1179,7 +1192,8 @@ export function WalletDisplay() {
                   onChange={(e) => setSendNFTRecipient(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter the recipient's ICP Principal ID (not Account ID).
+                  ICP Principal IDs use only letters a–z and digits 2–7 (not 0,
+                  1, 8, or 9). Find any wallet's Principal ID at nns.ic0.app
                 </p>
               </div>
             </div>

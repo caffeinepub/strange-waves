@@ -51,7 +51,36 @@ const KOTS_FALLBACK: AlbumView = {
   creationTimestamp: BigInt(0),
 };
 
-const FALLBACK_ALBUMS = [SSCC_FALLBACK, KOTS_FALLBACK];
+const MYSTIC_FIRE_FALLBACK: AlbumView = {
+  id: "mystic_fire",
+  name: "Mystic Fire",
+  description: "",
+  theme: "",
+  trackIds: [],
+  listenerTier: EMPTY_TIER,
+  collectorTier: EMPTY_TIER,
+  investorTier: EMPTY_TIER,
+  creationTimestamp: BigInt(0),
+};
+
+const KRYPTO_BEATZ_FALLBACK: AlbumView = {
+  id: "krypto_beatz",
+  name: "Krypto Beatz",
+  description: "",
+  theme: "",
+  trackIds: [],
+  listenerTier: EMPTY_TIER,
+  collectorTier: EMPTY_TIER,
+  investorTier: EMPTY_TIER,
+  creationTimestamp: BigInt(0),
+};
+
+const FALLBACK_ALBUMS = [
+  SSCC_FALLBACK,
+  KOTS_FALLBACK,
+  MYSTIC_FIRE_FALLBACK,
+  KRYPTO_BEATZ_FALLBACK,
+];
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -63,7 +92,7 @@ export function Header({ onNavigate }: HeaderProps) {
 
   const { data: albums, isLoading: albumsLoading } = useListAlbums();
 
-  // Merge backend albums with fallbacks, ensuring both known albums always appear
+  // Merge backend albums with fallbacks, ensuring all known albums always appear
   const sortedAlbums: AlbumView[] = (() => {
     const list: AlbumView[] = albums && albums.length > 0 ? [...albums] : [];
 
@@ -85,10 +114,30 @@ export function Header({ onNavigate }: HeaderProps) {
       list.push(KOTS_FALLBACK);
     }
 
-    // Sort: SScc first, then KOTS, then others
+    // Ensure Mystic Fire is present
+    if (!list.some((a) => a.id === "mystic_fire" || a.name === "Mystic Fire")) {
+      list.push(MYSTIC_FIRE_FALLBACK);
+    }
+
+    // Ensure Krypto Beatz is present
+    if (
+      !list.some((a) => a.id === "krypto_beatz" || a.name === "Krypto Beatz")
+    ) {
+      list.push(KRYPTO_BEATZ_FALLBACK);
+    }
+
+    // Sort: SScc first, then KOTS, then Mystic Fire, then Krypto Beatz, then others
     return list.sort((a, b) => {
       const order = (x: AlbumView) =>
-        x.id === "sscc_collection" ? 0 : x.id === "knight_of_the_soul" ? 1 : 2;
+        x.id === "sscc_collection"
+          ? 0
+          : x.id === "knight_of_the_soul"
+            ? 1
+            : x.id === "mystic_fire"
+              ? 2
+              : x.id === "krypto_beatz"
+                ? 3
+                : 4;
       return order(a) - order(b);
     });
   })();

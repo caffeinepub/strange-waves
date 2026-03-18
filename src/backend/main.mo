@@ -242,6 +242,62 @@ actor {
     streamUrl : Text;
   };
 
+  // ===== DIP-721 STANDARD DISCOVERY TYPES =====
+
+  public type SupportedStandard = {
+    name : Text;
+    url : Text;
+  };
+
+  public type Dip721CollectionMetadata = {
+    name : ?Text;
+    symbol : ?Text;
+    logo : ?Text;
+    totalSupply : Nat;
+    created_at : Nat64;
+    upgraded_at : Nat64;
+  };
+
+  public type GenericValue = {
+    #Nat64Content : Nat64;
+    #Nat32Content : Nat32;
+    #BoolContent : Bool;
+    #Nat8Content : Nat8;
+    #Int64Content : Int64;
+    #IntContent : Int;
+    #NatContent : Nat;
+    #Nat16Content : Nat16;
+    #Int32Content : Int32;
+    #Int8Content : Int8;
+    #Int16Content : Int16;
+    #FloatContent : Float;
+    #TextContent : Text;
+    #BlobContent : [Nat8];
+    #Principal : Principal;
+    #NestedContent : [(Text, GenericValue)];
+  };
+
+  public type TokenMetadata = {
+    token_identifier : Nat;
+    owner : ?Principal;
+    operator : ?Principal;
+    is_burned : Bool;
+    properties : [(Text, GenericValue)];
+    minted_at : Nat64;
+    minted_by : Principal;
+    transferred_at : ?Nat64;
+    transferred_by : ?Principal;
+    approved_at : ?Nat64;
+    approved_by : ?Principal;
+    burned_at : ?Nat64;
+    burned_by : ?Principal;
+  };
+
+  public type Dip721TokenMetadataResult = {
+    #Ok : TokenMetadata;
+    #Err : Text;
+  };
+
   let albums = Map.empty<Text, Album>();
   let audioFiles = Map.empty<Text, AudioFile>();
   let playlists = Map.empty<Text, Playlist>();
@@ -914,5 +970,103 @@ actor {
 
   func getSelfPrincipal() : Principal {
     Principal.fromText("ekdk4-winsz-4tts2-4cizd-hfp73-zfced-pvkev-n3z43-earir-4t2jy-yqe");
+  };
+
+  // ===== DIP-721 STANDARD DISCOVERY INTERFACE =====
+  // These methods are queried by OISY, Plug, and other ICP wallets
+  // to detect and import NFT collections.
+
+  /// Returns the NFT standards this canister implements.
+  /// OISY calls this first — returning DIP721 allows the collection to be imported.
+  public query func supportedStandards() : async [SupportedStandard] {
+    [{
+      name = "DIP721";
+      url = "https://github.com/Psychedelic/DIP721";
+    }];
+  };
+
+  /// DIP-721: collection name
+  public query func dip721_name() : async Text {
+    "Strange Waves";
+  };
+
+  /// DIP-721: collection symbol
+  public query func dip721_symbol() : async Text {
+    "SWNFT";
+  };
+
+  /// DIP-721: total number of NFTs minted in this collection
+  public query func dip721_total_supply() : async Nat {
+    nftWithParamsCounter;
+  };
+
+  /// DIP-721: collection-level metadata
+  public query func dip721_metadata() : async Dip721CollectionMetadata {
+    {
+      name = ?"Strange Waves";
+      symbol = ?"SWNFT";
+      logo = null;
+      totalSupply = nftWithParamsCounter;
+      created_at = 0;
+      upgraded_at = 0;
+    };
+  };
+
+  /// DIP-721: returns all token IDs owned by a given principal.
+  /// OISY uses this to enumerate NFTs held in a wallet.
+  public query func dip721_owner_token_identifiers(user : Principal) : async [Nat] {
+    nftRecordsWithParams.entries()
+      .filter(func(entry : (Nat, NFTRecordWithParams)) : Bool {
+        let tokenId = entry.0;
+        let record = entry.1;
+        switch (nftOwnership.get(tokenId)) {
+          case (?owner) { owner == user };
+          case (null) { record.metadata.owner == user };
+        };
+      })
+      .map(func(entry : (Nat, NFTRecordWithParams)) : Nat { entry.0 })
+      .toArray();
+  };
+
+  /// DIP-721: returns full metadata for a single token.
+  /// OISY calls this per token to render NFT cards.
+  public query func dip721_token_metadata(tokenId : Nat) : async Dip721TokenMetadataResult {
+    switch (nftRecordsWithParams.get(tokenId)) {
+      case (null) { #Err("Token not found") };
+      case (?record) {
+        let owner : ?Principal = switch (nftOwnership.get(tokenId)) {
+          case (?o) { ?o };
+          case (null) { ?record.metadata.owner };
+        };
+        let mintedAt : Nat64 = Int.abs(record.metadata.mintTimestamp) |> Nat64.fromNat(_);
+        let fileTypeText = switch (record.metadata.fileType) {
+          case (#audio) { "audio" };
+          case (#image) { "image" };
+          case (#combined) { "combined" };
+        };
+        #Ok({
+          token_identifier = tokenId;
+          owner;
+          operator = null;
+          is_burned = false;
+          properties = [
+            ("title", #TextContent(record.metadata.title)),
+            ("artist", #TextContent(record.metadata.artist)),
+            ("description", #TextContent(record.metadata.description)),
+            ("fileType", #TextContent(fileTypeText)),
+            ("royaltyPercentage", #NatContent(record.params.royaltyPercentage)),
+            ("price", #NatContent(record.params.price)),
+          ];
+          minted_at = mintedAt;
+          minted_by = record.metadata.owner;
+          transferred_at = null;
+          transferred_by = null;
+          approved_at = null;
+          approved_by = null;
+          burned_at = null;
+          burned_by = null;
+        });
+      };
+    };
   };
 };

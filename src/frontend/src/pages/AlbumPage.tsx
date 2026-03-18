@@ -63,6 +63,32 @@ const ALBUM_CONFIGS: Record<string, AlbumStaticConfig> = {
     emptyStateHint:
       'Upload tracks with "Knight of the Soul" in the title from the main page to populate this collection.',
   },
+  mystic_fire: {
+    displayTitle: "Mystic Fire",
+    subtitle: "SteveStrange",
+    bannerSrc: "",
+    bannerAlt: "Mystic Fire Banner",
+    trackFilterKeyword: "mystic fire",
+    about: [
+      "Mystic Fire is an exploration of the elemental and the ethereal — where ancient flame meets digital frequency. This collection burns through the boundaries of genre and form.",
+      "Let the fire activate what lies dormant within.",
+    ],
+    emptyStateHint:
+      'Upload tracks with "Mystic Fire" in the title from the main page to populate this collection.',
+  },
+  krypto_beatz: {
+    displayTitle: "Krypto Beatz",
+    subtitle: "SteveStrange",
+    bannerSrc: "",
+    bannerAlt: "Krypto Beatz Banner",
+    trackFilterKeyword: "krypto beatz",
+    about: [
+      "Krypto Beatz is a cipher encoded in rhythm — beats built at the intersection of cryptographic logic and raw sonic energy. This collection decrypts the language of the future through sound.",
+      "Every beat is a key. Every track unlocks something new.",
+    ],
+    emptyStateHint:
+      'Upload tracks with "Krypto Beatz" in the title from the main page to populate this collection.',
+  },
 };
 
 function getAlbumConfig(albumId: string): AlbumStaticConfig {

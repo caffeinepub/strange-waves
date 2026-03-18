@@ -58,6 +58,7 @@ import {
   Music,
   Plus,
   Radio,
+  RefreshCw,
   Share2,
   Trash2,
   Upload,
@@ -82,10 +83,19 @@ import {
   useRenamePlaylist,
   useSearchAudiusTracks,
 } from "../hooks/useQueries";
+import { getAudiusStreamUrl } from "../lib/audiusApi";
 
 interface PlaylistManagerProps {
   onSelectAudio: (audio: CombinedAudio) => void;
   onClose?: () => void;
+}
+
+/**
+ * Detect whether a trackId looks like an Audius hash ID:
+ * alphanumeric, 6–10 chars, no hyphens or underscores.
+ */
+function isAudiusTrackId(id: string): boolean {
+  return /^[A-Za-z0-9]{6,10}$/.test(id);
 }
 
 export function PlaylistManager({
@@ -209,12 +219,15 @@ export function PlaylistManager({
           audiusTrack.artwork?.["480x480"] ||
           "";
 
+    // Resolve the stream URL from the live Audius host (not a hardcoded stale host)
+    const streamUrl = await getAudiusStreamUrl(audiusTrack.id);
+
     const backendTrack = {
       id: audiusTrack.id,
       title: audiusTrack.title,
       artist: audiusTrack.user.name,
       artworkUrl: artworkUrl,
-      streamUrl: `https://discoveryprovider.audius.co/v1/tracks/${audiusTrack.id}/stream`,
+      streamUrl,
     };
 
     await addAudiusTrackMutation.mutateAsync({
@@ -413,6 +426,67 @@ export function PlaylistManager({
     const audioFile = getAudioFileById(trackId);
 
     if (!audioFile) {
+      // Graceful fallback for orphaned Audius track IDs saved before the dynamic-host fix
+      if (isAudiusTrackId(trackId)) {
+        return (
+          <div
+            key={trackId}
+            className="flex items-center gap-4 p-4 border-l-2 border-primary/30 bg-muted/10"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
+              <Radio className="h-6 w-6 text-primary/70" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Audius track (ID: {trackId})
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  <Radio className="mr-1 h-3 w-3" />
+                  Audius
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                <RefreshCw className="h-3 w-3" />
+                Re-add this track from the Audius tab to restore full metadata
+              </p>
+            </div>
+            {canEdit && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 opacity-60 hover:opacity-100"
+                    disabled={!isActorReady}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove Track</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Remove this saved Audius reference from the playlist?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleRemoveTrack(playlistId, trackId)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        );
+      }
+
+      // Truly unknown track ID
       return (
         <div
           key={trackId}

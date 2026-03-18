@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import { ThemeProvider } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AudioLibrary } from "./components/AudioLibrary";
 import { AudioUploader } from "./components/AudioUploader";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -16,7 +16,11 @@ import {
   useAudioPlayer,
 } from "./contexts/AudioPlayerContext";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useAudioFiles } from "./hooks/useQueries";
+import {
+  type CombinedAudio,
+  useAudioFiles,
+  usePlaylists,
+} from "./hooks/useQueries";
 import {
   logComponentError,
   logComponentInit,
@@ -45,21 +49,91 @@ function AppContent() {
 
   const { setTrack, openPopup, setTrackList } = useAudioPlayer();
   const { data: audioFiles = [] } = useAudioFiles();
+  const { data: playlists = [] } = usePlaylists();
+
+  // Guard so the URL ?track= auto-load only fires once
+  const hasAutoLoadedRef = useRef(false);
+
+  // Guard so the URL ?playlist= auto-load only fires once
+  const hasAutoLoadedPlaylistRef = useRef(false);
 
   // Auto-load track from URL ?track= param on mount
   useEffect(() => {
-    if (audioFiles.length === 0) return;
-    const trackId = new URLSearchParams(window.location.search).get("track");
-    if (!trackId) return;
-    const match = audioFiles.find((f) => f.id === trackId);
-    if (match) {
-      setTrackList(
-        audioFiles.map((f) => ({ source: "local" as const, data: f })),
-      );
-      setTrack({ source: "local", data: match });
-      openPopup();
+    if (audioFiles.length === 0 || hasAutoLoadedRef.current) return;
+    try {
+      const trackId = new URLSearchParams(window.location.search).get("track");
+      if (!trackId) {
+        hasAutoLoadedRef.current = true;
+        return;
+      }
+      const match = audioFiles.find((f) => f.id === trackId);
+      if (match) {
+        hasAutoLoadedRef.current = true;
+        setTrackList(
+          audioFiles.map((f) => ({ source: "local" as const, data: f })),
+        );
+        setTrack({ source: "local", data: match });
+        setTimeout(() => {
+          openPopup();
+        }, 400);
+      }
+    } catch (err) {
+      console.error("[App] Failed to auto-load shared track:", err);
     }
   }, [audioFiles, setTrack, openPopup, setTrackList]);
+
+  // Auto-load playlist from URL ?playlist= param on mount
+  useEffect(() => {
+    if (
+      audioFiles.length === 0 ||
+      playlists.length === 0 ||
+      hasAutoLoadedPlaylistRef.current
+    )
+      return;
+    try {
+      const playlistId = new URLSearchParams(window.location.search).get(
+        "playlist",
+      );
+      if (!playlistId) return;
+      const playlist = playlists.find((p) => p.id === playlistId);
+      if (!playlist) return;
+
+      const localTracks: CombinedAudio[] = playlist.trackIds.reduce(
+        (acc: CombinedAudio[], id) => {
+          const audioFile = audioFiles.find((f) => f.id === id);
+          if (audioFile) acc.push({ source: "local", data: audioFile });
+          return acc;
+        },
+        [],
+      );
+
+      const audiusTracks: CombinedAudio[] = playlist.audiusTracks.map((t) => ({
+        source: "audius" as const,
+        data: {
+          id: t.id,
+          title: t.title,
+          duration: 0,
+          artwork: t.artworkUrl
+            ? { "150x150": t.artworkUrl, "480x480": t.artworkUrl }
+            : undefined,
+          user: { name: t.artist, handle: t.artist },
+        },
+      }));
+
+      const combinedTracks: CombinedAudio[] = [...localTracks, ...audiusTracks];
+
+      if (combinedTracks.length > 0) {
+        hasAutoLoadedPlaylistRef.current = true;
+        setTrackList(combinedTracks);
+        setTrack(combinedTracks[0]);
+        setTimeout(() => {
+          openPopup();
+        }, 400);
+      }
+    } catch (err) {
+      console.error("[App] Failed to auto-load shared playlist:", err);
+    }
+  }, [audioFiles, playlists, setTrack, openPopup, setTrackList]);
 
   const handleNavigate = (page: string) => {
     console.log("[App] Navigating to page:", page);
@@ -201,7 +275,9 @@ function AppContent() {
       <Header onNavigate={handleNavigate} />
       <main className="flex-1 pb-20">{renderPage()}</main>
       <PersistentAudioPlayer />
-      <TrackPopupPlayer />
+      <ErrorBoundary>
+        <TrackPopupPlayer />
+      </ErrorBoundary>
       <Footer />
       <Toaster />
     </div>

@@ -67,6 +67,10 @@ export function AudioPlayerProvider({
   const shuffleRef = useRef(shuffle);
   const trackListRef = useRef(trackList);
   const currentTrackRef = useRef(currentTrack);
+  const volumeRef = useRef(volume);
+  const isMutedRef = useRef(isMuted);
+  const audioUrlRef = useRef(audioUrl);
+  const isPlayingRef = useRef(isPlaying);
 
   useEffect(() => {
     repeatRef.current = repeat;
@@ -80,6 +84,18 @@ export function AudioPlayerProvider({
   useEffect(() => {
     currentTrackRef.current = currentTrack;
   }, [currentTrack]);
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+  useEffect(() => {
+    audioUrlRef.current = audioUrl;
+  }, [audioUrl]);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -133,7 +149,7 @@ export function AudioPlayerProvider({
           }
         }
       } else if (audio.source === "audius") {
-        url = getAudiusStreamUrl(audio.data.id);
+        url = await getAudiusStreamUrl(audio.data.id);
         const artworkUrl =
           audio.data.artwork?.["480x480"] ||
           audio.data.artwork?.["150x150"] ||
@@ -144,54 +160,55 @@ export function AudioPlayerProvider({
       setAudioUrl(url);
     } catch (err) {
       console.error("[AudioPlayerContext] Failed to load audio:", err);
+      setCurrentTrack(null);
       setIsLoading(false);
     }
   }, []);
 
-  const play = () => {
+  const play = useCallback(() => {
     audioRef.current?.play().catch(() => {});
-  };
+  }, []);
 
-  const pause = () => {
+  const pause = useCallback(() => {
     audioRef.current?.pause();
-  };
+  }, []);
 
-  const togglePlay = () => {
-    if (!audioRef.current || !audioUrl) return;
-    if (isPlaying) {
+  const togglePlay = useCallback(() => {
+    if (!audioRef.current || !audioUrlRef.current) return;
+    if (isPlayingRef.current) {
       audioRef.current.pause();
     } else {
       audioRef.current.play().catch(() => {});
     }
-  };
+  }, []);
 
-  const seek = (time: number) => {
+  const seek = useCallback((time: number) => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = time;
     setCurrentTime(time);
-  };
+  }, []);
 
-  const handleSetVolume = (v: number) => {
+  const handleSetVolume = useCallback((v: number) => {
     if (audioRef.current) audioRef.current.volume = v;
     setVolume(v);
     if (v > 0) setIsMuted(false);
-  };
+  }, []);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (!audioRef.current) return;
-    if (isMuted) {
-      audioRef.current.volume = volume || 0.5;
+    if (isMutedRef.current) {
+      audioRef.current.volume = volumeRef.current || 0.5;
       setIsMuted(false);
     } else {
       audioRef.current.volume = 0;
       setIsMuted(true);
     }
-  };
+  }, []);
 
-  const toggleRepeat = () => setRepeat((r) => !r);
-  const toggleShuffle = () => setShuffle((s) => !s);
-  const openPopup = () => setIsPopupOpen(true);
-  const closePopup = () => setIsPopupOpen(false);
+  const toggleRepeat = useCallback(() => setRepeat((r) => !r), []);
+  const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
+  const openPopup = useCallback(() => setIsPopupOpen(true), []);
+  const closePopup = useCallback(() => setIsPopupOpen(false), []);
 
   const playNext = useCallback(() => {
     const list = trackListRef.current;
@@ -277,13 +294,13 @@ export function AudioPlayerProvider({
     }
   }, [playNext]);
 
-  const handlePlay = () => {
+  const handlePlay = useCallback(() => {
     setIsPlaying(true);
     const track = currentTrackRef.current;
     if (track) {
       incrementPlayCount(track.data.id);
     }
-  };
+  }, []);
 
   return (
     <AudioPlayerContext.Provider
@@ -332,7 +349,9 @@ export function AudioPlayerProvider({
         onLoadedMetadata={() => {
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
-            audioRef.current.volume = isMuted ? 0 : volume;
+            audioRef.current.volume = isMutedRef.current
+              ? 0
+              : volumeRef.current;
             setIsLoading(false);
             audioRef.current.play().catch(() => {});
           }

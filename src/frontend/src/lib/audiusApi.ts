@@ -5,8 +5,39 @@
  * for searching and streaming music tracks.
  */
 
-const AUDIUS_API_HOST = "https://discoveryprovider.audius.co";
-const APP_NAME = "AudioStreamingPlatform";
+const AUDIUS_HOST_REGISTRY = "https://api.audius.co";
+const APP_NAME = "StrangeWaves";
+
+// Module-level cache for the resolved host
+let cachedHost: string | null = null;
+
+/**
+ * Fetch a healthy Audius discovery provider host at runtime.
+ * Caches the result after the first successful fetch.
+ */
+async function getAudiusHost(): Promise<string> {
+  if (cachedHost) return cachedHost;
+
+  try {
+    const response = await fetch(AUDIUS_HOST_REGISTRY, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok)
+      throw new Error(`Host registry error: ${response.status}`);
+    const json: { data: string[] } = await response.json();
+    if (json.data && json.data.length > 0) {
+      cachedHost = json.data[0].replace(/\/$/, "");
+      return cachedHost;
+    }
+    throw new Error("No hosts returned from registry");
+  } catch (error) {
+    console.warn(
+      "Failed to fetch Audius host, falling back to registry URL:",
+      error,
+    );
+    return AUDIUS_HOST_REGISTRY;
+  }
+}
 
 export interface AudiusTrack {
   id: string;
@@ -48,7 +79,8 @@ export async function searchAudiusTracks(
   }
 
   try {
-    const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/search`);
+    const host = await getAudiusHost();
+    const url = new URL(`${host}/v1/tracks/search`);
     url.searchParams.append("query", query);
     url.searchParams.append("app_name", APP_NAME);
     url.searchParams.append("limit", limit.toString());
@@ -73,12 +105,13 @@ export async function searchAudiusTracks(
 }
 
 /**
- * Get the stream URL for an Audius track
+ * Get the stream URL for an Audius track (async — resolves the live host first)
  * @param trackId - The Audius track ID
- * @returns Stream URL for the track
+ * @returns Promise resolving to the stream URL
  */
-export function getAudiusStreamUrl(trackId: string): string {
-  return `${AUDIUS_API_HOST}/v1/tracks/${trackId}/stream?app_name=${APP_NAME}`;
+export async function getAudiusStreamUrl(trackId: string): Promise<string> {
+  const host = await getAudiusHost();
+  return `${host}/v1/tracks/${trackId}/stream?app_name=${APP_NAME}`;
 }
 
 /**
@@ -90,7 +123,8 @@ export async function getTrendingAudiusTracks(
   limit = 10,
 ): Promise<AudiusTrack[]> {
   try {
-    const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/trending`);
+    const host = await getAudiusHost();
+    const url = new URL(`${host}/v1/tracks/trending`);
     url.searchParams.append("app_name", APP_NAME);
     url.searchParams.append("limit", limit.toString());
 
@@ -122,7 +156,8 @@ export async function getAudiusTrackMetadata(
   trackId: string,
 ): Promise<AudiusTrack> {
   try {
-    const url = new URL(`${AUDIUS_API_HOST}/v1/tracks/${trackId}`);
+    const host = await getAudiusHost();
+    const url = new URL(`${host}/v1/tracks/${trackId}`);
     url.searchParams.append("app_name", APP_NAME);
 
     const response = await fetch(url.toString(), {

@@ -1019,7 +1019,14 @@ export function useTransferNFT() {
         throw new Error("Actor not ready. Please wait or log in.");
       }
       const { Principal } = await import("@dfinity/principal");
-      const toPrincipal = Principal.fromText(to.trim());
+      let toPrincipal: import("@dfinity/principal").Principal;
+      try {
+        toPrincipal = Principal.fromText(to.trim());
+      } catch {
+        throw new Error(
+          "Invalid recipient address. Enter a valid ICP Principal ID (letters a-z and digits 2-7 only, not 0, 1, 8, or 9).",
+        );
+      }
       const result = await actor.transferNFT(tokenId, toPrincipal as any);
       if (result.__kind__ !== "ok") {
         throw new Error(`Transfer failed: ${result.__kind__}`);
