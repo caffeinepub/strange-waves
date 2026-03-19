@@ -29,6 +29,7 @@ import {
 import { AboutPage } from "./pages/AboutPage";
 import AlbumPage from "./pages/AlbumPage";
 import { MusicMints } from "./pages/MusicMints";
+import { SocialsPage } from "./pages/SocialsPage";
 
 function AppContent() {
   const [_appError, setAppError] = useState<Error | null>(null);
@@ -176,12 +177,7 @@ function AppContent() {
           </div>
         );
       case "socials":
-        return (
-          <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold mb-4">Socials</h1>
-            <p className="text-lg text-muted-foreground">Coming soon...</p>
-          </div>
-        );
+        return <SocialsPage />;
       default:
         return (
           <div className="container mx-auto px-4 py-8">
