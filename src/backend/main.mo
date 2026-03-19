@@ -298,6 +298,46 @@ actor Self {
     #Err : Text;
   };
 
+  // ===== ICRC-7 NFT STANDARD TYPES =====
+
+  public type Account = {
+    owner : Principal;
+    subaccount : ?Blob;
+  };
+
+  public type Value = {
+    #Text : Text;
+    #Nat : Nat;
+    #Int : Int;
+    #Blob : Blob;
+    #Array : [Value];
+    #Map : [(Text, Value)];
+  };
+
+  public type TransferError = {
+    #NonExistingTokenId;
+    #InvalidRecipient;
+    #Unauthorized;
+    #TooOld;
+    #CreatedInFuture : { ledger_time : Nat64 };
+    #Duplicate : { duplicate_of : Nat };
+    #GenericError : { error_code : Nat; message : Text };
+    #GenericBatchError : { error_code : Nat; message : Text };
+  };
+
+  public type TransferArg = {
+    token_id : Nat;
+    from_subaccount : ?Blob;
+    to : Account;
+    memo : ?Blob;
+    created_at_time : ?Nat64;
+  };
+
+  public type TransferResult = {
+    #Ok : Nat;
+    #Err : TransferError;
+  };
+
   let albums = Map.empty<Text, Album>();
   let audioFiles = Map.empty<Text, AudioFile>();
   let playlists = Map.empty<Text, Playlist>();
@@ -541,8 +581,6 @@ actor Self {
   };
 
   /// Buy a listed NFT — transfers ownership to buyer
-  /// Note: actual ICP token transfer requires ledger canister integration;
-  /// this records ownership transfer on-chain within this canister.
   public shared ({ caller }) func buyNFT(tokenId : Nat) : async BuyNFTResponse {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       return #unauthorized;
@@ -968,35 +1006,39 @@ actor Self {
     Principal.fromActor(Self);
   };
 
-  // ===== DIP-721 STANDARD DISCOVERY INTERFACE =====
+  // ===== DIP-721 & ICRC-7 STANDARD DISCOVERY =====
   // These methods are queried by OISY, Plug, and other ICP wallets
   // to detect and import NFT collections.
 
-  /// Returns the NFT standards this canister implements.
-  /// OISY calls this first — returning DIP721 allows the collection to be imported.
+  /// Returns all NFT standards this canister implements.
+  /// Wallets use this first to know how to interact with the collection.
   public query func supportedStandards() : async [SupportedStandard] {
-    [{
-      name = "DIP721";
-      url = "https://github.com/Psychedelic/DIP721";
-    }];
+    [
+      {
+        name = "DIP721";
+        url = "https://github.com/Psychedelic/DIP721";
+      },
+      {
+        name = "ICRC-7";
+        url = "https://github.com/dfinity/ICRC/tree/main/ICRCs/ICRC-7";
+      },
+    ];
   };
 
-  /// DIP-721: collection name
+  // ===== DIP-721 DISCOVERY METHODS =====
+
   public query func dip721_name() : async Text {
     "Strange Waves";
   };
 
-  /// DIP-721: collection symbol
   public query func dip721_symbol() : async Text {
     "SWNFT";
   };
 
-  /// DIP-721: total number of NFTs minted in this collection
   public query func dip721_total_supply() : async Nat {
     nftWithParamsCounter;
   };
 
-  /// DIP-721: collection-level metadata
   public query func dip721_metadata() : async Dip721CollectionMetadata {
     {
       name = ?"Strange Waves";
@@ -1008,8 +1050,6 @@ actor Self {
     };
   };
 
-  /// DIP-721: returns all token IDs owned by a given principal.
-  /// OISY uses this to enumerate NFTs held in a wallet.
   public query func dip721_owner_token_identifiers(user : Principal) : async [Nat] {
     nftRecordsWithParams.entries()
       .filter(func(entry : (Nat, NFTRecordWithParams)) : Bool {
@@ -1024,8 +1064,6 @@ actor Self {
       .toArray();
   };
 
-  /// DIP-721: returns full metadata for a single token.
-  /// OISY calls this per token to render NFT cards.
   public query func dip721_token_metadata(tokenId : Nat) : async Dip721TokenMetadataResult {
     switch (nftRecordsWithParams.get(tokenId)) {
       case (null) { #Err("Token not found") };
@@ -1064,5 +1102,119 @@ actor Self {
         });
       };
     };
+  };
+
+  // ===== ICRC-7 INTERFACE =====
+
+  public query func icrc7_name() : async Text {
+    "Strange Waves";
+  };
+
+  public query func icrc7_symbol() : async Text {
+    "SWNFT";
+  };
+
+  public query func icrc7_total_supply() : async Nat {
+    nftWithParamsCounter;
+  };
+
+  public query func icrc7_collection_metadata() : async [(Text, Value)] {
+    [
+      ("icrc7:name", #Text("Strange Waves")),
+      ("icrc7:symbol", #Text("SWNFT")),
+      ("icrc7:total_supply", #Nat(nftWithParamsCounter)),
+      ("icrc7:description", #Text("Strange Waves Music NFT Collection")),
+    ];
+  };
+
+  public query func icrc7_owner_of(token_ids : [Nat]) : async [?Account] {
+    token_ids.map( func(tokenId : Nat) : ?Account {
+      let ownerOpt : ?Principal = switch (nftOwnership.get(tokenId)) {
+        case (?owner) { ?owner };
+        case (null) {
+          switch (nftRecordsWithParams.get(tokenId)) {
+            case (?record) { ?record.metadata.owner };
+            case (null) { null };
+          };
+        };
+      };
+      switch (ownerOpt) {
+        case (?owner) { ?{ owner; subaccount = null } };
+        case (null) { null };
+      };
+    });
+  };
+
+  public query func icrc7_balance_of(accounts : [Account]) : async [Nat] {
+    accounts.map(func(account : Account) : Nat {
+      nftRecordsWithParams.entries()
+        .filter(func(entry : (Nat, NFTRecordWithParams)) : Bool {
+          let tokenId = entry.0;
+          let record = entry.1;
+          let owner = switch (nftOwnership.get(tokenId)) {
+            case (?o) { o };
+            case (null) { record.metadata.owner };
+          };
+          owner == account.owner;
+        })
+        .size();
+    });
+  };
+
+  public query func icrc7_tokens_of(account : Account, prev : ?Nat, take : ?Nat) : async [Nat] {
+    let limit : Nat = switch (take) {
+      case (?n) { n };
+      case (null) { 1000 };
+    };
+    let all = nftRecordsWithParams.entries()
+      .filter(func(entry : (Nat, NFTRecordWithParams)) : Bool {
+        let tokenId = entry.0;
+        let record = entry.1;
+        let afterPrev = switch (prev) {
+          case (?p) { tokenId > p };
+          case (null) { true };
+        };
+        if (not afterPrev) { return false };
+        let owner = switch (nftOwnership.get(tokenId)) {
+          case (?o) { o };
+          case (null) { record.metadata.owner };
+        };
+        owner == account.owner;
+      })
+      .map(func(entry : (Nat, NFTRecordWithParams)) : Nat { entry.0 })
+      .toArray();
+    if (all.size() <= limit) { all }
+    else {
+      Array.tabulate<Nat>(limit, func(i : Nat) : Nat { all[i] });
+    };
+  };
+
+  public shared ({ caller }) func icrc7_transfer(args : [TransferArg]) : async [?TransferResult] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      return args.map(func(_ : TransferArg) : ?TransferResult {
+        ?#Err(#Unauthorized)
+      });
+    };
+    args.map(func(arg : TransferArg) : ?TransferResult {
+      let tokenId = arg.token_id;
+      switch (nftRecordsWithParams.get(tokenId)) {
+        case (null) { ?#Err(#NonExistingTokenId) };
+        case (?record) {
+          let currentOwner = switch (nftOwnership.get(tokenId)) {
+            case (?o) { o };
+            case (null) { record.metadata.owner };
+          };
+          if (currentOwner != caller) { return ?#Err(#Unauthorized) };
+          switch (nftListings.get(tokenId)) {
+            case (?_) {
+              return ?#Err(#GenericError({ error_code = 1; message = "NFT is listed for sale. Delist first." }));
+            };
+            case (null) {};
+          };
+          nftOwnership.add(tokenId, arg.to.owner);
+          ?#Ok(tokenId);
+        };
+      };
+    });
   };
 };

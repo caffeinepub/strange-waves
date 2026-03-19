@@ -1,27 +1,29 @@
 # Strange Waves
 
 ## Current State
-The backend has a DIP-721 NFT implementation with minting, ownership transfer, and marketplace functions. However, it is missing the standard interface discovery methods that external wallets (OISY, Plug, etc.) query to detect the NFT standard before importing a collection.
+Backend implements DIP-721 NFT standard with `supportedStandards()`, `dip721_name()`, `dip721_symbol()`, `dip721_total_supply()`, `dip721_metadata()`, `dip721_owner_token_identifiers()`, and `dip721_token_metadata()`. OISY and Plug cannot detect the collection because they primarily query for ICRC-7 (the newer ICP NFT standard) rather than DIP-721.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `supportedStandards()` query method returning `[{ name: "DIP721"; url: "https://github.com/Psychedelic/DIP721" }]`
-- `dip721_name()` query returning the collection name "Strange Waves"
-- `dip721_symbol()` query returning the collection symbol "SWNFT"
-- `dip721_total_supply()` query returning the current total number of minted NFTs
-- `dip721_metadata()` query returning collection-level metadata
-- `dip721_owner_token_identifiers(user: Principal)` query returning token IDs owned by a principal (for OISY NFT display)
-- `dip721_token_metadata(tokenId: Nat)` query returning per-token metadata in DIP-721 format
+- ICRC-7 types: `Account`, `Value`, `TransferArg`, `TransferResult`, `TransferError`
+- `icrc7_collection_metadata()` — returns collection metadata as key-value pairs
+- `icrc7_name()` — collection name
+- `icrc7_symbol()` — collection symbol
+- `icrc7_total_supply()` — total minted tokens
+- `icrc7_owner_of(token_ids: [Nat])` — returns owner Account per token
+- `icrc7_tokens_of(account: Account, prev: ?Nat, take: ?Nat)` — paginated token list for an account
+- `icrc7_balance_of(accounts: [Account])` — count of tokens per account
+- `icrc7_transfer(args: [TransferArg])` — ICRC-7 compliant transfer
 
 ### Modify
-- `main.mo` — add all DIP-721 interface discovery and metadata methods
+- `supportedStandards()` — also return ICRC-7 alongside DIP721
 
 ### Remove
-- Nothing removed
+- Nothing
 
 ## Implementation Plan
-1. Add `SupportedStandard` type and `supportedStandards()` query to backend
-2. Add collection-level metadata queries (`dip721_name`, `dip721_symbol`, `dip721_total_supply`, `dip721_metadata`)
-3. Add per-token queries (`dip721_token_metadata`, `dip721_owner_token_identifiers`) in DIP-721 format
-4. Validate and build
+1. Add ICRC-7 type definitions to main.mo
+2. Add all required ICRC-7 query and update methods
+3. Update `supportedStandards()` to include ICRC-7
+4. Regenerate backend bindings and update frontend IDL files
