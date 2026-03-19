@@ -196,6 +196,13 @@ export function WalletDisplay() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [canisterId, setCanisterId] = useState("");
+  const [copiedCanisterId, setCopiedCanisterId] = useState(false);
+
+  useEffect(() => {
+    setCanisterId(localStorage.getItem("liveCanisterId") || "");
+  }, []);
+
   const [icpBalance, setIcpBalance] = useState<number | null>(null);
   const [isLoadingICP, setIsLoadingICP] = useState(false);
 
@@ -302,6 +309,13 @@ export function WalletDisplay() {
     loadICPBalance();
     loadTransactionHistory();
   }, [loadICPBalance, loadTransactionHistory]);
+
+  const copyCanisterId = () => {
+    if (!canisterId) return;
+    navigator.clipboard.writeText(canisterId);
+    setCopiedCanisterId(true);
+    setTimeout(() => setCopiedCanisterId(false), 2000);
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -951,6 +965,45 @@ export function WalletDisplay() {
                 your Account ID in the correct format.
               </p>
             </div>
+          </div>
+
+          {/* NFT Collection Canister ID */}
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3 mb-4">
+            <p className="text-sm font-semibold text-primary">
+              NFT Collection Canister ID
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This is the canister ID for your Strange Waves NFTs — use this
+              when adding your collection to OISY or Plug.
+            </p>
+            {canisterId ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className="font-mono text-xs bg-muted px-2 py-1 rounded flex-1 break-all"
+                  data-ocid="wallet.canister_id.input"
+                >
+                  {canisterId}
+                </span>
+                <button
+                  type="button"
+                  onClick={copyCanisterId}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border hover:bg-muted transition-colors shrink-0"
+                  title="Copy Canister ID"
+                  data-ocid="wallet.canister_id.button"
+                >
+                  {copiedCanisterId ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-amber-500/80 flex items-center gap-1.5">
+                <Info className="h-3 w-3 shrink-0" />
+                Not set — enter your canister ID in Settings (⚙️ icon)
+              </p>
+            )}
           </div>
 
           <Tabs defaultValue="assets" className="w-full">

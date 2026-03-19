@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
+  Check,
+  Copy,
   Image as ImageIcon,
   Lock,
   Music,
@@ -69,6 +71,19 @@ export function NFTDetailModal({
   const [previewTime, setPreviewTime] = useState(0);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState(false);
+  const [canisterId, setCanisterId] = useState("");
+  const [copiedCanisterId, setCopiedCanisterId] = useState(false);
+
+  useEffect(() => {
+    setCanisterId(localStorage.getItem("liveCanisterId") || "");
+  }, []);
+
+  const copyCanisterId = () => {
+    if (!canisterId) return;
+    navigator.clipboard.writeText(canisterId);
+    setCopiedCanisterId(true);
+    setTimeout(() => setCopiedCanisterId(false), 2000);
+  };
 
   const audioUrl = nft.audioBlob?.getDirectURL();
   const imageUrl = nft.imageBlob?.getDirectURL();
@@ -250,6 +265,31 @@ export function NFTDetailModal({
                     {formatDate(nft.metadata.mintTimestamp)}
                   </span>
                 </div>
+                {canisterId && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      Canister:
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {canisterId.length > 20
+                        ? `${canisterId.slice(0, 12)}…${canisterId.slice(-8)}`
+                        : canisterId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyCanisterId}
+                      className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors"
+                      title="Copy Canister ID"
+                      data-ocid="nft.canister_id.button"
+                    >
+                      {copiedCanisterId ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </DialogHeader>
 
               {/* 30-Second Preview Player */}
