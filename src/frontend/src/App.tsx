@@ -26,6 +26,7 @@ import {
   logComponentInit,
   logComponentSuccess,
 } from "./lib/diagnostics";
+import { AboutPage } from "./pages/AboutPage";
 import AlbumPage from "./pages/AlbumPage";
 import { MusicMints } from "./pages/MusicMints";
 
@@ -158,17 +159,12 @@ function AppContent() {
     switch (currentPage) {
       case "music-mints":
         return <MusicMints />;
+      case "about":
+        return <AboutPage />;
       case "fan-connect":
         return (
           <div className="container mx-auto px-4 py-8">
             <h1 className="text-4xl font-bold mb-4">FAN Connect</h1>
-            <p className="text-lg text-muted-foreground">Coming soon...</p>
-          </div>
-        );
-      case "about":
-        return (
-          <div className="container mx-auto px-4 py-8">
-            <h1 className="text-4xl font-bold mb-4">About Strange Waves</h1>
             <p className="text-lg text-muted-foreground">Coming soon...</p>
           </div>
         );
