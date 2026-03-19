@@ -11,7 +11,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AudioFile } from "../backend";
 import { NFTMintDialog } from "../components/NFTMintDialog";
 import { useAudioPlayer } from "../contexts/AudioPlayerContext";
@@ -797,18 +797,30 @@ export default function AlbumPage({
   const [mintTrack, setMintTrack] = useState<AudioFile | null>(null);
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
 
-  const { setTrack: setGlobalTrack } = useAudioPlayer();
+  const { setTrack: setGlobalTrack, setTrackList } = useAudioPlayer();
   const { identity } = useInternetIdentity();
   const mintMutation = useMintNFTWithParams();
 
   // Tracks load independently — page shell always renders regardless
   const { data: allTracks = [], isLoading: tracksLoading } = useAudioFiles();
   const albumConfig = getAlbumConfig(albumId);
-  const albumTracks = allTracks.filter((t) =>
-    t.title
-      .toLowerCase()
-      .includes(albumConfig.trackFilterKeyword.toLowerCase()),
+  const albumTracks = useMemo(
+    () =>
+      allTracks.filter((t) =>
+        t.title
+          .toLowerCase()
+          .includes(albumConfig.trackFilterKeyword.toLowerCase()),
+      ),
+    [allTracks, albumConfig.trackFilterKeyword],
   );
+  useEffect(() => {
+    if (albumTracks.length > 0) {
+      setTrackList(
+        albumTracks.map((t) => ({ source: "local" as const, data: t })),
+      );
+    }
+  }, [albumTracks, setTrackList]);
+
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
   const selectedTrackIndex = selectedTrack

@@ -1002,7 +1002,6 @@ export function WalletDisplay() {
               </p>
             )}
           </div>
-
           <Tabs defaultValue="assets" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="assets">Assets</TabsTrigger>
