@@ -1,3 +1,4 @@
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,7 +150,7 @@ export function NFTMintDialog({
       : null;
 
   const handleMint = async () => {
-    if (!title.trim() || !artist.trim() || !description.trim()) return;
+    if (!title.trim() || !artist.trim() || !description) return;
     if (!paymentMethod) return;
 
     const priceNum = Number.parseFloat(usdPrice);
@@ -185,7 +186,7 @@ export function NFTMintDialog({
 
     await onMint({
       title: title.trim(),
-      description: description.trim(),
+      description: description,
       artist: artist.trim(),
       fileType: mintType,
       price: effectivePrice,
@@ -292,7 +293,7 @@ export function NFTMintDialog({
     !isLoading &&
     title.trim() !== "" &&
     artist.trim() !== "" &&
-    description.trim() !== "" &&
+    description !== "" &&
     paymentMethod !== "" &&
     isValidPercentage &&
     Number.parseFloat(usdPrice) > 0 &&
@@ -535,12 +536,9 @@ export function NFTMintDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="nft-description">Description *</Label>
-                <Textarea
-                  id="nft-description"
+                <RichTextEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your NFT..."
-                  rows={3}
+                  onChange={setDescription}
                   disabled={isLoading}
                 />
               </div>

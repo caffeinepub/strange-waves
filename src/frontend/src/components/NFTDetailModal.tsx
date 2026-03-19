@@ -30,6 +30,7 @@ import type {
 } from "../backend";
 import { FileType } from "../backend";
 import { useCanisterId } from "../hooks/useQueries";
+import { RichTextRenderer } from "./RichTextRenderer";
 
 export interface NFTAttachment {
   name: string;
@@ -198,7 +199,6 @@ export function NFTDetailModal({
             }}
             onError={() => setAudioError(true)}
           >
-            {/* biome-ignore lint/a11y/useMediaCaption: short preview clips have no captions */}
             <track kind="captions" />
           </audio>
         )}
@@ -369,9 +369,7 @@ export function NFTDetailModal({
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Description
                   </p>
-                  <p className="text-sm leading-relaxed text-foreground/80">
-                    {nft.metadata.description}
-                  </p>
+                  <RichTextRenderer value={nft.metadata.description} />
                 </div>
               )}
 
@@ -398,23 +396,41 @@ export function NFTDetailModal({
                           >
                             {canView ? (
                               <>
-                                <span className="flex-1 text-sm truncate">
-                                  {att.name}
-                                </span>
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs shrink-0"
-                                >
-                                  {att.type || "file"}
-                                </Badge>
-                                {att.url && (
-                                  <a
-                                    href={att.url}
-                                    download={att.name}
-                                    className="text-xs text-primary hover:underline shrink-0"
-                                  >
-                                    Download
-                                  </a>
+                                {!att.isPrivate &&
+                                att.url &&
+                                att.type &&
+                                att.type.startsWith("image") ? (
+                                  <div className="w-full space-y-2">
+                                    <img
+                                      src={att.url}
+                                      alt={att.name}
+                                      className="w-full max-h-64 object-contain rounded-lg border border-border/40"
+                                    />
+                                    <p className="text-xs text-muted-foreground text-center truncate">
+                                      {att.name}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="flex-1 text-sm truncate">
+                                      {att.name}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs shrink-0"
+                                    >
+                                      {att.type || "file"}
+                                    </Badge>
+                                    {att.url && (
+                                      <a
+                                        href={att.url}
+                                        download={att.name}
+                                        className="text-xs text-primary hover:underline shrink-0"
+                                      >
+                                        Download
+                                      </a>
+                                    )}
+                                  </>
                                 )}
                               </>
                             ) : (
