@@ -1045,3 +1045,31 @@ export function useTransferNFT() {
     },
   });
 }
+
+// ===== CANISTER ID =====
+
+/**
+ * Fetches the live canister ID directly from the backend at runtime.
+ * This uses Principal.fromActor(Self) in Motoko, so it always returns
+ * the actual deployed canister ID — no manual entry or env vars needed.
+ */
+export function useCanisterId() {
+  const { actor } = useActor();
+  return useQuery({
+    queryKey: ["canisterId"],
+    queryFn: async () => {
+      if (!actor) return null;
+      try {
+        const principal = await actor.getCanisterId();
+        const id = principal.toString();
+        // Cache in localStorage so Settings panel can also show it
+        localStorage.setItem("liveCanisterId", id);
+        return id;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!actor,
+    staleTime: Number.POSITIVE_INFINITY, // canister ID never changes during a session
+  });
+}

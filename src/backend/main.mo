@@ -12,7 +12,7 @@ import Storage "blob-storage/Storage";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-actor {
+actor Self {
   include MixinStorage();
 
   let accessControlState = AccessControl.initState();
@@ -965,11 +965,7 @@ actor {
   };
 
   public query func getCanisterId() : async Principal {
-    getSelfPrincipal();
-  };
-
-  func getSelfPrincipal() : Principal {
-    Principal.fromText("ekdk4-winsz-4tts2-4cizd-hfp73-zfced-pvkev-n3z43-earir-4t2jy-yqe");
+    Principal.fromActor(Self);
   };
 
   // ===== DIP-721 STANDARD DISCOVERY INTERFACE =====

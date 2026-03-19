@@ -29,6 +29,7 @@ import type {
   StableCoin,
 } from "../backend";
 import { FileType } from "../backend";
+import { useCanisterId } from "../hooks/useQueries";
 
 export interface NFTAttachment {
   name: string;
@@ -71,12 +72,8 @@ export function NFTDetailModal({
   const [previewTime, setPreviewTime] = useState(0);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState(false);
-  const [canisterId, setCanisterId] = useState("");
+  const { data: canisterId = "" } = useCanisterId();
   const [copiedCanisterId, setCopiedCanisterId] = useState(false);
-
-  useEffect(() => {
-    setCanisterId(localStorage.getItem("liveCanisterId") || "");
-  }, []);
 
   const copyCanisterId = () => {
     if (!canisterId) return;

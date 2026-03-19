@@ -48,6 +48,7 @@ import { FileType } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCallerNFTRecordsWithParams,
+  useCanisterId,
   useGetListings,
   useTransferNFT,
 } from "../hooks/useQueries";
@@ -196,12 +197,8 @@ export function WalletDisplay() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
-  const [canisterId, setCanisterId] = useState("");
+  const { data: canisterId = "" } = useCanisterId();
   const [copiedCanisterId, setCopiedCanisterId] = useState(false);
-
-  useEffect(() => {
-    setCanisterId(localStorage.getItem("liveCanisterId") || "");
-  }, []);
 
   const [icpBalance, setIcpBalance] = useState<number | null>(null);
   const [isLoadingICP, setIsLoadingICP] = useState(false);
@@ -1001,7 +998,7 @@ export function WalletDisplay() {
             ) : (
               <p className="text-xs text-amber-500/80 flex items-center gap-1.5">
                 <Info className="h-3 w-3 shrink-0" />
-                Not set — enter your canister ID in Settings (⚙️ icon)
+                Loading canister ID...
               </p>
             )}
           </div>
