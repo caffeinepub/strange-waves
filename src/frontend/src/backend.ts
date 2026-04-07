@@ -117,12 +117,19 @@ export interface NFTRecordWithParams {
     audioBlob?: ExternalBlob;
     params: NFTParameters;
 }
+export interface NFTAttachmentRecord {
+    name: string;
+    mimeType: string;
+    blob: ExternalBlob;
+    isPrivate: boolean;
+}
 export interface NFTRecordWithParamsView {
     tokenId: bigint;
     imageBlob?: ExternalBlob;
     metadata: NFTMetadata;
     audioBlob?: ExternalBlob;
     params: NFTParameters;
+    attachments: Array<NFTAttachmentRecord>;
 }
 export interface _CaffeineStorageCreateCertificateResult {
     method: string;
@@ -210,6 +217,7 @@ export interface MintNFTWithParamsRequest {
     originalContentId?: string;
     artist: string;
     params: NFTParameters;
+    attachments: Array<NFTAttachmentRecord>;
 }
 export interface NFTMetadata {
     title: string;
@@ -358,7 +366,7 @@ export interface backendInterface {
     ownerOf(tokenId: bigint): Promise<Principal | null>;
     transferNFT(tokenId: bigint, to: Principal): Promise<NFTTransferResult>;
 }
-import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, NFTRecordWithParamsView as _NFTRecordWithParamsView, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { AlbumView as _AlbumView, AudioFile as _AudioFile, ExternalBlob as _ExternalBlob, FileType as _FileType, Genre as _Genre, MintNFTRequest as _MintNFTRequest, MintNFTResponse as _MintNFTResponse, MintNFTWithParamsRequest as _MintNFTWithParamsRequest, NFTAttachmentRecord as _NFTAttachmentRecord, NFTMetadata as _NFTMetadata, NFTParameters as _NFTParameters, NFTRecord as _NFTRecord, NFTRecordWithParams as _NFTRecordWithParams, NFTRecordWithParamsView as _NFTRecordWithParamsView, PlaylistView as _PlaylistView, RevenueSplit as _RevenueSplit, StableCoin as _StableCoin, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -1170,13 +1178,20 @@ async function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promi
     metadata: _NFTMetadata;
     audioBlob: [] | [_ExternalBlob];
     params: _NFTParameters;
+    attachments: Array<{ name: string; mimeType: string; blob: _ExternalBlob; isPrivate: boolean }>;
 }): Promise<NFTRecordWithParamsView> {
     return {
         tokenId: value.tokenId,
         imageBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.imageBlob)),
         metadata: from_candid_NFTMetadata_n23(_uploadFile, _downloadFile, value.metadata),
         audioBlob: record_opt_to_undefined(await from_candid_opt_n16(_uploadFile, _downloadFile, value.audioBlob)),
-        params: from_candid_NFTParameters_n30(_uploadFile, _downloadFile, value.params)
+        params: from_candid_NFTParameters_n30(_uploadFile, _downloadFile, value.params),
+        attachments: await Promise.all((value.attachments ?? []).map(async (att) => ({
+            name: att.name,
+            mimeType: att.mimeType,
+            blob: await _downloadFile(att.blob),
+            isPrivate: att.isPrivate,
+        })))
     };
 }
 function from_candid_record_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -1434,6 +1449,7 @@ async function to_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise
     originalContentId?: string;
     artist: string;
     params: NFTParameters;
+    attachments: Array<NFTAttachmentRecord>;
 }): Promise<{
     title: string;
     imageBlob: [] | [_ExternalBlob];
@@ -1443,6 +1459,7 @@ async function to_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise
     originalContentId: [] | [string];
     artist: string;
     params: _NFTParameters;
+    attachments: Array<{ name: string; mimeType: string; blob: _ExternalBlob; isPrivate: boolean }>;
 }> {
     return {
         title: value.title,
@@ -1452,7 +1469,13 @@ async function to_candid_record_n51(_uploadFile: (file: ExternalBlob) => Promise
         fileType: to_candid_FileType_n46(_uploadFile, _downloadFile, value.fileType),
         originalContentId: value.originalContentId ? candid_some(value.originalContentId) : candid_none(),
         artist: value.artist,
-        params: to_candid_NFTParameters_n52(_uploadFile, _downloadFile, value.params)
+        params: to_candid_NFTParameters_n52(_uploadFile, _downloadFile, value.params),
+        attachments: await Promise.all((value.attachments ?? []).map(async (att) => ({
+            name: att.name,
+            mimeType: att.mimeType,
+            blob: await _uploadFile(att.blob),
+            isPrivate: att.isPrivate,
+        })))
     };
 }
 function to_candid_record_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

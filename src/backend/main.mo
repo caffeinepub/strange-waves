@@ -146,6 +146,13 @@ actor Self {
     params : NFTParameters;
   };
 
+  public type NFTAttachmentRecord = {
+    name : Text;
+    mimeType : Text;
+    blob : Storage.ExternalBlob;
+    isPrivate : Bool;
+  };
+
   // View type returned by queries — includes tokenId but is NOT stored
   public type NFTRecordWithParamsView = {
     tokenId : Nat;
@@ -153,6 +160,7 @@ actor Self {
     imageBlob : ?Storage.ExternalBlob;
     metadata : NFTMetadata;
     params : NFTParameters;
+    attachments : [NFTAttachmentRecord];
   };
 
   public type MintNFTWithParamsRequest = {
@@ -164,6 +172,7 @@ actor Self {
     originalContentId : ?Text;
     title : Text;
     params : NFTParameters;
+    attachments : [NFTAttachmentRecord];
   };
 
   // ===== DIP-721 MARKETPLACE TYPES =====
@@ -353,6 +362,9 @@ actor Self {
   // Marketplace listings: tokenId -> NFTListing
   var nftListings = Map.empty<Nat, NFTListing>();
 
+  // Attachment storage: tokenId -> attachments
+  var nftAttachments = Map.empty<Nat, [NFTAttachmentRecord]>();
+
   // Convert Album to AlbumView (immutable)
   func toAlbumView(album : Album) : AlbumView {
     {
@@ -443,6 +455,9 @@ actor Self {
     nftRecordsWithParams.add(nftId, record);
     // Record initial ownership in the ownership map
     nftOwnership.add(nftId, caller);
+    if (request.attachments.size() > 0) {
+      nftAttachments.add(nftId, request.attachments);
+    };
     nftWithParamsCounter += 1;
 
     #ok(nftId);
@@ -450,7 +465,10 @@ actor Self {
 
   public query func getNFTRecordWithParams(nftId : Nat) : async ?NFTRecordWithParamsView {
     switch (nftRecordsWithParams.get(nftId)) {
-      case (?record) { ?{ record with tokenId = nftId } };
+      case (?record) {
+        let atts = switch (nftAttachments.get(nftId)) { case (?a) { a }; case (null) { [] } };
+        ?{ record with tokenId = nftId; attachments = atts }
+      };
       case (null) { null };
     };
   };
@@ -458,7 +476,8 @@ actor Self {
   public query func getAllNFTRecordsWithParams() : async [NFTRecordWithParamsView] {
     nftRecordsWithParams.entries()
       .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParamsView {
-        { entry.1 with tokenId = entry.0 }
+        let atts = switch (nftAttachments.get(entry.0)) { case (?a) { a }; case (null) { [] } };
+        { entry.1 with tokenId = entry.0; attachments = atts }
       })
       .toArray();
   };
@@ -478,7 +497,8 @@ actor Self {
         };
       })
       .map(func(entry : (Nat, NFTRecordWithParams)) : NFTRecordWithParamsView {
-        { entry.1 with tokenId = entry.0 }
+        let atts = switch (nftAttachments.get(entry.0)) { case (?a) { a }; case (null) { [] } };
+        { entry.1 with tokenId = entry.0; attachments = atts }
       })
       .toArray();
   };

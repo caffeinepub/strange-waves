@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AudioFile, RevenueSplit, StableCoin } from "../backend";
-import { FileType } from "../backend";
+import { ExternalBlob, FileType, type NFTAttachmentRecord } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 type EditionType = "1of1" | "collection";
@@ -64,7 +64,7 @@ interface NFTMintDialogProps {
     royaltyPercentage: number;
     revenueSplits: RevenueSplit[];
     editionCount: number;
-    attachments: MintAttachment[];
+    attachments: NFTAttachmentRecord[];
   }) => Promise<void>;
   isLoading: boolean;
 }
@@ -184,6 +184,18 @@ export function NFTMintDialog({
         ? Number.parseFloat(icpEquivalent)
         : priceNum;
 
+    const uploadedAttachments: NFTAttachmentRecord[] = [];
+    for (const att of attachments) {
+      const bytes = new Uint8Array(await att.file.arrayBuffer());
+      const blob = ExternalBlob.fromBytes(bytes);
+      uploadedAttachments.push({
+        name: att.name,
+        mimeType: att.file.type || "application/octet-stream",
+        blob,
+        isPrivate: att.isPrivate,
+      });
+    }
+
     await onMint({
       title: title.trim(),
       description: description,
@@ -196,7 +208,7 @@ export function NFTMintDialog({
       royaltyPercentage,
       revenueSplits: revenueSplitsFormatted,
       editionCount: editionType === "1of1" ? 1 : editionCount,
-      attachments,
+      attachments: uploadedAttachments,
     });
   };
 

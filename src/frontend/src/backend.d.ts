@@ -14,6 +14,12 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
+export interface NFTAttachmentRecord {
+    name: string;
+    mimeType: string;
+    blob: ExternalBlob;
+    isPrivate: boolean;
+}
 export interface PlaylistView {
     id: string;
     title: string;
@@ -45,6 +51,7 @@ export interface NFTRecordWithParamsView {
     metadata: NFTMetadata;
     audioBlob?: ExternalBlob;
     params: NFTParameters;
+    attachments: Array<NFTAttachmentRecord>;
 }
 export type Genre = {
     __kind__: "pop";
@@ -169,6 +176,7 @@ export interface MintNFTWithParamsRequest {
     originalContentId?: string;
     artist: string;
     params: NFTParameters;
+    attachments: Array<NFTAttachmentRecord>;
 }
 export interface NFTMetadata {
     title: string;

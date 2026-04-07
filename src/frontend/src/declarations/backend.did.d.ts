@@ -80,6 +80,12 @@ export interface MintNFTRequest {
 export type MintNFTResponse = { 'ok' : bigint } |
   { 'invalidInput' : string } |
   { 'unauthorized' : null };
+export interface NFTAttachmentRecord {
+  'name' : string,
+  'mimeType' : string,
+  'blob' : ExternalBlob,
+  'isPrivate' : boolean,
+}
 export interface MintNFTWithParamsRequest {
   'title' : string,
   'imageBlob' : [] | [ExternalBlob],
@@ -89,6 +95,7 @@ export interface MintNFTWithParamsRequest {
   'originalContentId' : [] | [string],
   'artist' : string,
   'params' : NFTParameters,
+  'attachments' : Array<NFTAttachmentRecord>,
 }
 export interface NFTMetadata {
   'title' : string,
@@ -122,6 +129,7 @@ export interface NFTRecordWithParamsView {
   'metadata' : NFTMetadata,
   'audioBlob' : [] | [ExternalBlob],
   'params' : NFTParameters,
+  'attachments' : Array<NFTAttachmentRecord>,
 }
 export interface PlaylistView {
   'id' : string,

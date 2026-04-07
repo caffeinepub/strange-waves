@@ -9,6 +9,7 @@ import type {
   Genre,
   MintNFTRequest,
   MintNFTWithParamsRequest,
+  NFTAttachmentRecord,
   NFTParameters,
   NFTRecord,
   NFTRecordWithParams,
@@ -397,6 +398,7 @@ export function useMintNFTWithParams() {
       royaltyPercentage,
       revenueSplits,
       editionCount,
+      attachments,
     }: {
       audioFile: AudioFile;
       title: string;
@@ -408,6 +410,7 @@ export function useMintNFTWithParams() {
       royaltyPercentage: number;
       revenueSplits: RevenueSplit[];
       editionCount?: number;
+      attachments?: NFTAttachmentRecord[];
     }) => {
       if (!actor || !isActorReady) {
         throw new Error("Actor not ready. Please wait or log in.");
@@ -435,6 +438,7 @@ export function useMintNFTWithParams() {
             ? audioFile.coverImage
             : undefined,
         params,
+        attachments: attachments ?? [],
       };
 
       const editions = editionCount ?? 1;

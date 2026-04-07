@@ -84,6 +84,7 @@ export function AudioLibrary({
   selectedAudioId,
 }: AudioLibraryProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("playlists");
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
@@ -132,6 +133,17 @@ export function AudioLibrary({
     if (bi === -1) return -1;
     return ai - bi;
   });
+
+  const filteredLocalFiles = localSearchQuery.trim()
+    ? sortedLocalFiles.filter((file) => {
+        const q = localSearchQuery.toLowerCase();
+        return (
+          file.title.toLowerCase().includes(q) ||
+          file.creator.toLowerCase().includes(q) ||
+          formatGenre(file.genre).toLowerCase().includes(q)
+        );
+      })
+    : sortedLocalFiles;
 
   const handleDragStart = (id: string) => {
     dragItemRef.current = id;
@@ -197,6 +209,7 @@ export function AudioLibrary({
     royaltyPercentage: number;
     revenueSplits: any[];
     editionCount?: number;
+    attachments?: any[];
   }) => {
     if (!selectedFileForMint) return;
 
@@ -234,9 +247,24 @@ export function AudioLibrary({
       );
     }
 
+    if (filteredLocalFiles.length === 0 && localSearchQuery.trim()) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center py-12 text-center"
+          data-ocid="tracks.search.empty_state"
+        >
+          <Search className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Tracks Found</h3>
+          <p className="text-sm text-muted-foreground">
+            No tracks match &ldquo;{localSearchQuery}&rdquo;
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sortedLocalFiles.map((file, idx) => (
+        {filteredLocalFiles.map((file, idx) => (
           <Card
             key={file.id}
             draggable={isAdmin}
@@ -249,7 +277,7 @@ export function AudioLibrary({
             } ${isAdmin ? "relative" : ""}`}
             onClick={() => {
               setTrackList(
-                sortedLocalFiles.map((f) => ({
+                filteredLocalFiles.map((f) => ({
                   source: "local" as const,
                   data: f,
                 })),
@@ -521,7 +549,27 @@ export function AudioLibrary({
             </TabsContent>
 
             <TabsContent value="local" className="space-y-4">
-              <ScrollArea className="h-[500px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search tracks by title, artist, or genre..."
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                  data-ocid="local.search_input"
+                />
+                {localSearchQuery && (
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setLocalSearchQuery("")}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <ScrollArea className="h-[450px]">
                 {renderLocalFiles()}
               </ScrollArea>
             </TabsContent>

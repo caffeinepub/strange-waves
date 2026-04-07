@@ -131,12 +131,19 @@ export const NFTRecordWithParams = IDL.Record({
   'audioBlob' : IDL.Opt(ExternalBlob),
   'params' : NFTParameters,
 });
+export const NFTAttachmentRecord = IDL.Record({
+  'name' : IDL.Text,
+  'mimeType' : IDL.Text,
+  'blob' : ExternalBlob,
+  'isPrivate' : IDL.Bool,
+});
 export const NFTRecordWithParamsView = IDL.Record({
   'tokenId' : IDL.Nat,
   'imageBlob' : IDL.Opt(ExternalBlob),
   'metadata' : NFTMetadata,
   'audioBlob' : IDL.Opt(ExternalBlob),
   'params' : NFTParameters,
+  'attachments' : IDL.Vec(NFTAttachmentRecord),
 });
 export const UserProfile = IDL.Record({
   'bio' : IDL.Opt(IDL.Text),
@@ -166,6 +173,7 @@ export const MintNFTWithParamsRequest = IDL.Record({
   'originalContentId' : IDL.Opt(IDL.Text),
   'artist' : IDL.Text,
   'params' : NFTParameters,
+  'attachments' : IDL.Vec(NFTAttachmentRecord),
 });
 
 export const NFTListing = IDL.Record({
@@ -424,12 +432,19 @@ export const idlFactory = ({ IDL }) => {
     'audioBlob' : IDL.Opt(ExternalBlob),
     'params' : NFTParameters,
   });
+  const NFTAttachmentRecord = IDL.Record({
+    'name' : IDL.Text,
+    'mimeType' : IDL.Text,
+    'blob' : ExternalBlob,
+    'isPrivate' : IDL.Bool,
+  });
   const NFTRecordWithParamsView = IDL.Record({
     'tokenId' : IDL.Nat,
     'imageBlob' : IDL.Opt(ExternalBlob),
     'metadata' : NFTMetadata,
     'audioBlob' : IDL.Opt(ExternalBlob),
     'params' : NFTParameters,
+    'attachments' : IDL.Vec(NFTAttachmentRecord),
   });
   const UserProfile = IDL.Record({
     'bio' : IDL.Opt(IDL.Text),
@@ -459,6 +474,7 @@ export const idlFactory = ({ IDL }) => {
     'originalContentId' : IDL.Opt(IDL.Text),
     'artist' : IDL.Text,
     'params' : NFTParameters,
+    'attachments' : IDL.Vec(NFTAttachmentRecord),
   });
   
   const NFTListing = IDL.Record({

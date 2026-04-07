@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ExternalLink, Globe, Music2, Twitter } from "lucide-react";
+import { ExternalLink, Globe, Music2, Twitter, Users } from "lucide-react";
 import { motion } from "motion/react";
 
 interface SocialLink {
@@ -47,6 +47,15 @@ const socialLinks: SocialLink[] = [
     url: "https://audius.co/stevestrange",
     icon: <Music2 className="h-6 w-6" />,
     label: "Listen on Audius →",
+  },
+  {
+    id: "artist-hub",
+    title: "Artist Hub",
+    description:
+      "A powerful resource platform built to empower music artists — tools, connections, and community to amplify your creative journey.",
+    url: "https://artist-hub-stack-ev1.caffeine.xyz",
+    icon: <Users className="h-6 w-6" />,
+    label: "Explore Artist Hub →",
   },
 ];
 

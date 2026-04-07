@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronUp,
   DollarSign,
+  ExternalLink,
   Image as ImageIcon,
   Loader2,
   Music,
@@ -579,6 +580,37 @@ export function MusicMints() {
           Explore and collect NFTs from Strange Waves. Each NFT is fully
           on-chain with permanent ICP ownership transfer.
         </p>
+      </div>
+
+      {/* Audius Profile Section */}
+      <div className="mb-8 max-w-3xl mx-auto">
+        <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center justify-center h-14 w-14 rounded-full bg-primary/15 border border-primary/30 shrink-0">
+            <Music className="h-7 w-7 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="text-base font-bold">Steve Strange on Audius</h3>
+              <Badge variant="secondary" className="text-xs">
+                MP3 &amp; WAV Downloads
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Original tracks from this collection are available for purchase
+              and download directly on Audius. MP3 and WAV formats are available
+              through the platform.
+            </p>
+          </div>
+          <a
+            href="https://audius.co/stevestrange"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors shrink-0"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open Audius
+          </a>
+        </div>
       </div>
 
       {/* Payment integration notice */}

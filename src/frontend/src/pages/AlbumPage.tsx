@@ -89,6 +89,18 @@ const ALBUM_CONFIGS: Record<string, AlbumStaticConfig> = {
     emptyStateHint:
       'Upload tracks with "Krypto Beatz" in the title from the main page to populate this collection.',
   },
+  wellness_wednesday: {
+    displayTitle: "Wellness Wednesday",
+    subtitle: "SteveStrange",
+    bannerSrc: "",
+    bannerAlt: "Wellness Wednesday Banner",
+    trackFilterKeyword: "wellness wednesday",
+    about: [
+      "This community is a harmonic convergence for consciously aware individuals who seek to deepen their innerstanding and experience the profound fulfillment of the spirit through the boundless power of love. Here, we embrace a holistic path to well-being, exploring how to cultivate high vibrations in every facet of our lives. Dive into insightful discussions on the Earth's natural wisdom, focusing on the restorative properties of natural-pathic remedies, the ancient alchemy of herbs, the cellular balance offered by cell salts, and the uplifting essence of essential oils. Together, we nurture our spirits",
+    ],
+    emptyStateHint:
+      'Upload tracks with "Wellness Wednesday" in the title from the main page to populate this collection.',
+  },
 };
 
 function getAlbumConfig(albumId: string): AlbumStaticConfig {
@@ -1114,6 +1126,7 @@ export default function AlbumPage({
               royaltyPercentage: data.royaltyPercentage,
               revenueSplits: data.revenueSplits,
               editionCount: data.editionCount,
+              attachments: data.attachments,
             });
             setMintDialogOpen(false);
             setMintTrack(null);

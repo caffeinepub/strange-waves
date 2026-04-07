@@ -282,6 +282,7 @@ export function AudioUploader() {
     description: string;
     artist: string;
     fileType: FileType;
+    attachments?: any[];
   }) => {
     if (!uploadedAudioFile) return;
 

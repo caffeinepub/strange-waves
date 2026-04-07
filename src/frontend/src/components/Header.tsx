@@ -75,11 +75,25 @@ const KRYPTO_BEATZ_FALLBACK: AlbumView = {
   creationTimestamp: BigInt(0),
 };
 
+const WELLNESS_WEDNESDAY_FALLBACK: AlbumView = {
+  id: "wellness_wednesday",
+  name: "Wellness Wednesday",
+  description:
+    "community as harmonic convergence for consciously aware individuals who seek to deepen their innerstanding and experience the profound fulfillment of the spirit through the boundless power of love, embracing a holistic path to well-being, exploring how to cultivate high vibrations in every facet of our lives",
+  theme: "",
+  trackIds: [],
+  listenerTier: EMPTY_TIER,
+  collectorTier: EMPTY_TIER,
+  investorTier: EMPTY_TIER,
+  creationTimestamp: BigInt(0),
+};
+
 const FALLBACK_ALBUMS = [
   SSCC_FALLBACK,
   KOTS_FALLBACK,
   MYSTIC_FIRE_FALLBACK,
   KRYPTO_BEATZ_FALLBACK,
+  WELLNESS_WEDNESDAY_FALLBACK,
 ];
 
 interface HeaderProps {
@@ -126,7 +140,16 @@ export function Header({ onNavigate }: HeaderProps) {
       list.push(KRYPTO_BEATZ_FALLBACK);
     }
 
-    // Sort: SScc first, then KOTS, then Mystic Fire, then Krypto Beatz, then others
+    // Ensure Wellness Wednesday is present
+    if (
+      !list.some(
+        (a) => a.id === "wellness_wednesday" || a.name === "Wellness Wednesday",
+      )
+    ) {
+      list.push(WELLNESS_WEDNESDAY_FALLBACK);
+    }
+
+    // Sort: SScc first, then KOTS, then Mystic Fire, then Krypto Beatz, then Wellness Wednesday, then others
     return list.sort((a, b) => {
       const order = (x: AlbumView) =>
         x.id === "sscc_collection"
@@ -137,7 +160,9 @@ export function Header({ onNavigate }: HeaderProps) {
               ? 2
               : x.id === "krypto_beatz"
                 ? 3
-                : 4;
+                : x.id === "wellness_wednesday"
+                  ? 4
+                  : 5;
       return order(a) - order(b);
     });
   })();
