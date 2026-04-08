@@ -8,14 +8,16 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+export const GenericValue = IDL.Rec();
+export const Value = IDL.Rec();
+export const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
   'method' : IDL.Text,
   'blob_hash' : IDL.Text,
 });
-export const _CaffeineStorageRefillInformation = IDL.Record({
+export const _ImmutableObjectStorageRefillInformation = IDL.Record({
   'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
 });
-export const _CaffeineStorageRefillResult = IDL.Record({
+export const _ImmutableObjectStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
@@ -30,6 +32,13 @@ export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
+});
+export const BuyNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'cannotBuyOwn' : IDL.Null,
+  'notListed' : IDL.Null,
+  'notFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
 });
 export const AlbumTier = IDL.Record({
   'name' : IDL.Text,
@@ -64,6 +73,59 @@ export const PlaylistView = IDL.Record({
   'creationTimestamp' : IDL.Int,
   'trackIds' : IDL.Vec(IDL.Text),
   'audiusTracks' : IDL.Vec(AudiusTrack),
+});
+export const TransferNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'alreadyListed' : IDL.Null,
+  'notFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
+});
+export const Dip721CollectionMetadata = IDL.Record({
+  'logo' : IDL.Opt(IDL.Text),
+  'name' : IDL.Opt(IDL.Text),
+  'totalSupply' : IDL.Nat,
+  'created_at' : IDL.Nat64,
+  'upgraded_at' : IDL.Nat64,
+  'symbol' : IDL.Opt(IDL.Text),
+});
+GenericValue.fill(
+  IDL.Variant({
+    'Nat64Content' : IDL.Nat64,
+    'Nat32Content' : IDL.Nat32,
+    'BoolContent' : IDL.Bool,
+    'Nat8Content' : IDL.Nat8,
+    'Int64Content' : IDL.Int64,
+    'IntContent' : IDL.Int,
+    'NatContent' : IDL.Nat,
+    'Nat16Content' : IDL.Nat16,
+    'Int32Content' : IDL.Int32,
+    'Int8Content' : IDL.Int8,
+    'FloatContent' : IDL.Float64,
+    'Int16Content' : IDL.Int16,
+    'BlobContent' : IDL.Vec(IDL.Nat8),
+    'NestedContent' : IDL.Vec(IDL.Tuple(IDL.Text, GenericValue)),
+    'Principal' : IDL.Principal,
+    'TextContent' : IDL.Text,
+  })
+);
+export const TokenMetadata = IDL.Record({
+  'transferred_at' : IDL.Opt(IDL.Nat64),
+  'transferred_by' : IDL.Opt(IDL.Principal),
+  'owner' : IDL.Opt(IDL.Principal),
+  'operator' : IDL.Opt(IDL.Principal),
+  'approved_at' : IDL.Opt(IDL.Nat64),
+  'approved_by' : IDL.Opt(IDL.Principal),
+  'properties' : IDL.Vec(IDL.Tuple(IDL.Text, GenericValue)),
+  'is_burned' : IDL.Bool,
+  'token_identifier' : IDL.Nat,
+  'burned_at' : IDL.Opt(IDL.Nat64),
+  'burned_by' : IDL.Opt(IDL.Principal),
+  'minted_at' : IDL.Nat64,
+  'minted_by' : IDL.Principal,
+});
+export const Dip721TokenMetadataResult = IDL.Variant({
+  'Ok' : TokenMetadata,
+  'Err' : IDL.Text,
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const Genre = IDL.Variant({
@@ -108,6 +170,12 @@ export const NFTRecord = IDL.Record({
   'metadata' : NFTMetadata,
   'audioBlob' : IDL.Opt(ExternalBlob),
 });
+export const NFTAttachmentRecord = IDL.Record({
+  'blob' : ExternalBlob,
+  'name' : IDL.Text,
+  'mimeType' : IDL.Text,
+  'isPrivate' : IDL.Bool,
+});
 export const StableCoin = IDL.Variant({
   'tusd' : IDL.Null,
   'usdc' : IDL.Null,
@@ -125,30 +193,71 @@ export const NFTParameters = IDL.Record({
   'price' : IDL.Nat,
   'royaltyPercentage' : IDL.Nat,
 });
-export const NFTRecordWithParams = IDL.Record({
-  'imageBlob' : IDL.Opt(ExternalBlob),
-  'metadata' : NFTMetadata,
-  'audioBlob' : IDL.Opt(ExternalBlob),
-  'params' : NFTParameters,
-});
-export const NFTAttachmentRecord = IDL.Record({
-  'name' : IDL.Text,
-  'mimeType' : IDL.Text,
-  'blob' : ExternalBlob,
-  'isPrivate' : IDL.Bool,
-});
 export const NFTRecordWithParamsView = IDL.Record({
   'tokenId' : IDL.Nat,
   'imageBlob' : IDL.Opt(ExternalBlob),
   'metadata' : NFTMetadata,
   'audioBlob' : IDL.Opt(ExternalBlob),
-  'params' : NFTParameters,
   'attachments' : IDL.Vec(NFTAttachmentRecord),
+  'params' : NFTParameters,
 });
 export const UserProfile = IDL.Record({
   'bio' : IDL.Opt(IDL.Text),
   'name' : IDL.Text,
   'email' : IDL.Opt(IDL.Text),
+});
+export const NFTListing = IDL.Record({
+  'title' : IDL.Text,
+  'tokenId' : IDL.Nat,
+  'listedAt' : IDL.Int,
+  'description' : IDL.Text,
+  'fileType' : FileType,
+  'seller' : IDL.Principal,
+  'priceE8s' : IDL.Nat,
+});
+export const Account = IDL.Record({
+  'owner' : IDL.Principal,
+  'subaccount' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+});
+Value.fill(
+  IDL.Variant({
+    'Int' : IDL.Int,
+    'Map' : IDL.Vec(IDL.Tuple(IDL.Text, Value)),
+    'Nat' : IDL.Nat,
+    'Blob' : IDL.Vec(IDL.Nat8),
+    'Text' : IDL.Text,
+    'Array' : IDL.Vec(Value),
+  })
+);
+export const TransferArg = IDL.Record({
+  'to' : Account,
+  'token_id' : IDL.Nat,
+  'memo' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+  'from_subaccount' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+  'created_at_time' : IDL.Opt(IDL.Nat64),
+});
+export const TransferError = IDL.Variant({
+  'GenericError' : IDL.Record({ 'message' : IDL.Text, 'error_code' : IDL.Nat }),
+  'Duplicate' : IDL.Record({ 'duplicate_of' : IDL.Nat }),
+  'NonExistingTokenId' : IDL.Null,
+  'Unauthorized' : IDL.Null,
+  'CreatedInFuture' : IDL.Record({ 'ledger_time' : IDL.Nat64 }),
+  'InvalidRecipient' : IDL.Null,
+  'GenericBatchError' : IDL.Record({
+    'message' : IDL.Text,
+    'error_code' : IDL.Nat,
+  }),
+  'TooOld' : IDL.Null,
+});
+export const TransferResult = IDL.Variant({
+  'Ok' : IDL.Nat,
+  'Err' : TransferError,
+});
+export const ListNFTResponse = IDL.Variant({
+  'ok' : IDL.Null,
+  'alreadyListed' : IDL.Null,
+  'notFound' : IDL.Null,
+  'unauthorized' : IDL.Null,
 });
 export const MintNFTRequest = IDL.Record({
   'title' : IDL.Text,
@@ -172,76 +281,67 @@ export const MintNFTWithParamsRequest = IDL.Record({
   'fileType' : FileType,
   'originalContentId' : IDL.Opt(IDL.Text),
   'artist' : IDL.Text,
-  'params' : NFTParameters,
   'attachments' : IDL.Vec(NFTAttachmentRecord),
+  'params' : NFTParameters,
 });
-
-export const NFTListing = IDL.Record({
-  'tokenId' : IDL.Nat,
-  'seller' : IDL.Principal,
-  'priceE8s' : IDL.Nat,
-  'listedAt' : IDL.Int,
-  'title' : IDL.Text,
-  'description' : IDL.Text,
-  'fileType' : FileType,
-});
-export const ListNFTResponse = IDL.Variant({
-  'ok' : IDL.Null,
-  'notFound' : IDL.Null,
-  'unauthorized' : IDL.Null,
-  'alreadyListed' : IDL.Null,
-});
-export const TransferNFTResponse = IDL.Variant({
-  'ok' : IDL.Null,
-  'notFound' : IDL.Null,
-  'unauthorized' : IDL.Null,
-  'alreadyListed' : IDL.Null,
-});
-export const BuyNFTResponse = IDL.Variant({
-  'ok' : IDL.Null,
-  'notListed' : IDL.Null,
-  'unauthorized' : IDL.Null,
-  'notFound' : IDL.Null,
-  'cannotBuyOwn' : IDL.Null,
+export const SupportedStandard = IDL.Record({
+  'url' : IDL.Text,
+  'name' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
-  '_caffeineStorageBlobIsLive' : IDL.Func(
-      [IDL.Vec(IDL.Nat8)],
-      [IDL.Bool],
+  '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [IDL.Vec(IDL.Bool)],
       ['query'],
     ),
-  '_caffeineStorageBlobsToDelete' : IDL.Func(
+  '_immutableObjectStorageBlobsToDelete' : IDL.Func(
       [],
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       ['query'],
     ),
-  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+  '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       [],
       [],
     ),
-  '_caffeineStorageCreateCertificate' : IDL.Func(
+  '_immutableObjectStorageCreateCertificate' : IDL.Func(
       [IDL.Text],
-      [_CaffeineStorageCreateCertificateResult],
+      [_ImmutableObjectStorageCreateCertificateResult],
       [],
     ),
-  '_caffeineStorageRefillCashier' : IDL.Func(
-      [IDL.Opt(_CaffeineStorageRefillInformation)],
-      [_CaffeineStorageRefillResult],
+  '_immutableObjectStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+      [_ImmutableObjectStorageRefillResult],
       [],
     ),
-  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'addAudiusTrackToPlaylist' : IDL.Func([IDL.Text, AudiusTrack], [], []),
   'addTrackToAlbum' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'addTrackToPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
   'createAlbum' : IDL.Func([AlbumInput], [AlbumView], []),
   'createPlaylist' : IDL.Func([IDL.Text, IDL.Text], [PlaylistView], []),
   'deleteAlbum' : IDL.Func([IDL.Text], [], []),
   'deleteAudioFile' : IDL.Func([IDL.Text], [], []),
   'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+  'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
+  'dip721_metadata' : IDL.Func([], [Dip721CollectionMetadata], ['query']),
+  'dip721_name' : IDL.Func([], [IDL.Text], ['query']),
+  'dip721_owner_token_identifiers' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(IDL.Nat)],
+      ['query'],
+    ),
+  'dip721_symbol' : IDL.Func([], [IDL.Text], ['query']),
+  'dip721_token_metadata' : IDL.Func(
+      [IDL.Nat],
+      [Dip721TokenMetadataResult],
+      ['query'],
+    ),
+  'dip721_total_supply' : IDL.Func([], [IDL.Nat], ['query']),
   'getAlbum' : IDL.Func([IDL.Text], [IDL.Opt(AlbumView)], ['query']),
   'getAllAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
   'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
@@ -267,6 +367,7 @@ export const idlService = IDL.Service({
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCanisterId' : IDL.Func([], [IDL.Principal], ['query']),
+  'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
   'getNFTRecord' : IDL.Func([IDL.Nat], [IDL.Opt(NFTRecord)], ['query']),
   'getNFTRecordWithParams' : IDL.Func(
       [IDL.Nat],
@@ -279,44 +380,77 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'icrc7_balance_of' : IDL.Func(
+      [IDL.Vec(Account)],
+      [IDL.Vec(IDL.Nat)],
+      ['query'],
+    ),
+  'icrc7_collection_metadata' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Text, Value))],
+      ['query'],
+    ),
+  'icrc7_name' : IDL.Func([], [IDL.Text], ['query']),
+  'icrc7_owner_of' : IDL.Func(
+      [IDL.Vec(IDL.Nat)],
+      [IDL.Vec(IDL.Opt(Account))],
+      ['query'],
+    ),
+  'icrc7_symbol' : IDL.Func([], [IDL.Text], ['query']),
+  'icrc7_tokens_of' : IDL.Func(
+      [Account, IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat)],
+      [IDL.Vec(IDL.Nat)],
+      ['query'],
+    ),
+  'icrc7_total_supply' : IDL.Func([], [IDL.Nat], ['query']),
+  'icrc7_transfer' : IDL.Func(
+      [IDL.Vec(TransferArg)],
+      [IDL.Vec(IDL.Opt(TransferResult))],
+      [],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listAlbums' : IDL.Func([], [IDL.Vec(AlbumView)], ['query']),
+  'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
   'mintNFT' : IDL.Func([MintNFTRequest], [MintNFTResponse], []),
   'mintNFTwithParams' : IDL.Func(
       [MintNFTWithParamsRequest],
       [MintNFTResponse],
       [],
     ),
+  'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
   'removeAudiusTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'removeTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'supportedStandards' : IDL.Func([], [IDL.Vec(SupportedStandard)], ['query']),
+  'transferNFT' : IDL.Func([IDL.Nat, IDL.Principal], [TransferNFTResponse], []),
   'updateAlbum' : IDL.Func([IDL.Text, AlbumInput], [AlbumView], []),
   'updatePlaylistTitle' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'updateTrackCoverImage' : IDL.Func(
+      [IDL.Text, ExternalBlob],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
   'uploadAudioFile' : IDL.Func([AudioFile], [IDL.Text], []),
   'uploadTrackWithAlbum' : IDL.Func(
       [AudioFile, IDL.Opt(IDL.Text)],
       [IDL.Text],
       [],
     ),
-  'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
-  'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
-  'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
-  'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
-  'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
-  'transferNFT' : IDL.Func([IDL.Nat, IDL.Principal], [TransferNFTResponse], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  const GenericValue = IDL.Rec();
+  const Value = IDL.Rec();
+  const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
     'method' : IDL.Text,
     'blob_hash' : IDL.Text,
   });
-  const _CaffeineStorageRefillInformation = IDL.Record({
+  const _ImmutableObjectStorageRefillInformation = IDL.Record({
     'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
   });
-  const _CaffeineStorageRefillResult = IDL.Record({
+  const _ImmutableObjectStorageRefillResult = IDL.Record({
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
@@ -331,6 +465,13 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const BuyNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'cannotBuyOwn' : IDL.Null,
+    'notListed' : IDL.Null,
+    'notFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
   });
   const AlbumTier = IDL.Record({
     'name' : IDL.Text,
@@ -365,6 +506,59 @@ export const idlFactory = ({ IDL }) => {
     'creationTimestamp' : IDL.Int,
     'trackIds' : IDL.Vec(IDL.Text),
     'audiusTracks' : IDL.Vec(AudiusTrack),
+  });
+  const TransferNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'alreadyListed' : IDL.Null,
+    'notFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
+  });
+  const Dip721CollectionMetadata = IDL.Record({
+    'logo' : IDL.Opt(IDL.Text),
+    'name' : IDL.Opt(IDL.Text),
+    'totalSupply' : IDL.Nat,
+    'created_at' : IDL.Nat64,
+    'upgraded_at' : IDL.Nat64,
+    'symbol' : IDL.Opt(IDL.Text),
+  });
+  GenericValue.fill(
+    IDL.Variant({
+      'Nat64Content' : IDL.Nat64,
+      'Nat32Content' : IDL.Nat32,
+      'BoolContent' : IDL.Bool,
+      'Nat8Content' : IDL.Nat8,
+      'Int64Content' : IDL.Int64,
+      'IntContent' : IDL.Int,
+      'NatContent' : IDL.Nat,
+      'Nat16Content' : IDL.Nat16,
+      'Int32Content' : IDL.Int32,
+      'Int8Content' : IDL.Int8,
+      'FloatContent' : IDL.Float64,
+      'Int16Content' : IDL.Int16,
+      'BlobContent' : IDL.Vec(IDL.Nat8),
+      'NestedContent' : IDL.Vec(IDL.Tuple(IDL.Text, GenericValue)),
+      'Principal' : IDL.Principal,
+      'TextContent' : IDL.Text,
+    })
+  );
+  const TokenMetadata = IDL.Record({
+    'transferred_at' : IDL.Opt(IDL.Nat64),
+    'transferred_by' : IDL.Opt(IDL.Principal),
+    'owner' : IDL.Opt(IDL.Principal),
+    'operator' : IDL.Opt(IDL.Principal),
+    'approved_at' : IDL.Opt(IDL.Nat64),
+    'approved_by' : IDL.Opt(IDL.Principal),
+    'properties' : IDL.Vec(IDL.Tuple(IDL.Text, GenericValue)),
+    'is_burned' : IDL.Bool,
+    'token_identifier' : IDL.Nat,
+    'burned_at' : IDL.Opt(IDL.Nat64),
+    'burned_by' : IDL.Opt(IDL.Principal),
+    'minted_at' : IDL.Nat64,
+    'minted_by' : IDL.Principal,
+  });
+  const Dip721TokenMetadataResult = IDL.Variant({
+    'Ok' : TokenMetadata,
+    'Err' : IDL.Text,
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
   const Genre = IDL.Variant({
@@ -409,6 +603,12 @@ export const idlFactory = ({ IDL }) => {
     'metadata' : NFTMetadata,
     'audioBlob' : IDL.Opt(ExternalBlob),
   });
+  const NFTAttachmentRecord = IDL.Record({
+    'blob' : ExternalBlob,
+    'name' : IDL.Text,
+    'mimeType' : IDL.Text,
+    'isPrivate' : IDL.Bool,
+  });
   const StableCoin = IDL.Variant({
     'tusd' : IDL.Null,
     'usdc' : IDL.Null,
@@ -426,30 +626,71 @@ export const idlFactory = ({ IDL }) => {
     'price' : IDL.Nat,
     'royaltyPercentage' : IDL.Nat,
   });
-  const NFTRecordWithParams = IDL.Record({
-    'imageBlob' : IDL.Opt(ExternalBlob),
-    'metadata' : NFTMetadata,
-    'audioBlob' : IDL.Opt(ExternalBlob),
-    'params' : NFTParameters,
-  });
-  const NFTAttachmentRecord = IDL.Record({
-    'name' : IDL.Text,
-    'mimeType' : IDL.Text,
-    'blob' : ExternalBlob,
-    'isPrivate' : IDL.Bool,
-  });
   const NFTRecordWithParamsView = IDL.Record({
     'tokenId' : IDL.Nat,
     'imageBlob' : IDL.Opt(ExternalBlob),
     'metadata' : NFTMetadata,
     'audioBlob' : IDL.Opt(ExternalBlob),
-    'params' : NFTParameters,
     'attachments' : IDL.Vec(NFTAttachmentRecord),
+    'params' : NFTParameters,
   });
   const UserProfile = IDL.Record({
     'bio' : IDL.Opt(IDL.Text),
     'name' : IDL.Text,
     'email' : IDL.Opt(IDL.Text),
+  });
+  const NFTListing = IDL.Record({
+    'title' : IDL.Text,
+    'tokenId' : IDL.Nat,
+    'listedAt' : IDL.Int,
+    'description' : IDL.Text,
+    'fileType' : FileType,
+    'seller' : IDL.Principal,
+    'priceE8s' : IDL.Nat,
+  });
+  const Account = IDL.Record({
+    'owner' : IDL.Principal,
+    'subaccount' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+  });
+  Value.fill(
+    IDL.Variant({
+      'Int' : IDL.Int,
+      'Map' : IDL.Vec(IDL.Tuple(IDL.Text, Value)),
+      'Nat' : IDL.Nat,
+      'Blob' : IDL.Vec(IDL.Nat8),
+      'Text' : IDL.Text,
+      'Array' : IDL.Vec(Value),
+    })
+  );
+  const TransferArg = IDL.Record({
+    'to' : Account,
+    'token_id' : IDL.Nat,
+    'memo' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+    'from_subaccount' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+    'created_at_time' : IDL.Opt(IDL.Nat64),
+  });
+  const TransferError = IDL.Variant({
+    'GenericError' : IDL.Record({
+      'message' : IDL.Text,
+      'error_code' : IDL.Nat,
+    }),
+    'Duplicate' : IDL.Record({ 'duplicate_of' : IDL.Nat }),
+    'NonExistingTokenId' : IDL.Null,
+    'Unauthorized' : IDL.Null,
+    'CreatedInFuture' : IDL.Record({ 'ledger_time' : IDL.Nat64 }),
+    'InvalidRecipient' : IDL.Null,
+    'GenericBatchError' : IDL.Record({
+      'message' : IDL.Text,
+      'error_code' : IDL.Nat,
+    }),
+    'TooOld' : IDL.Null,
+  });
+  const TransferResult = IDL.Variant({ 'Ok' : IDL.Nat, 'Err' : TransferError });
+  const ListNFTResponse = IDL.Variant({
+    'ok' : IDL.Null,
+    'alreadyListed' : IDL.Null,
+    'notFound' : IDL.Null,
+    'unauthorized' : IDL.Null,
   });
   const MintNFTRequest = IDL.Record({
     'title' : IDL.Text,
@@ -473,76 +714,64 @@ export const idlFactory = ({ IDL }) => {
     'fileType' : FileType,
     'originalContentId' : IDL.Opt(IDL.Text),
     'artist' : IDL.Text,
-    'params' : NFTParameters,
     'attachments' : IDL.Vec(NFTAttachmentRecord),
+    'params' : NFTParameters,
   });
-  
-  const NFTListing = IDL.Record({
-    'tokenId' : IDL.Nat,
-    'seller' : IDL.Principal,
-    'priceE8s' : IDL.Nat,
-    'listedAt' : IDL.Int,
-    'title' : IDL.Text,
-    'description' : IDL.Text,
-    'fileType' : FileType,
-  });
-  const ListNFTResponse = IDL.Variant({
-    'ok' : IDL.Null,
-    'notFound' : IDL.Null,
-    'unauthorized' : IDL.Null,
-    'alreadyListed' : IDL.Null,
-  });
-  const TransferNFTResponse = IDL.Variant({
-    'ok' : IDL.Null,
-    'notFound' : IDL.Null,
-    'unauthorized' : IDL.Null,
-    'alreadyListed' : IDL.Null,
-  });
-  const BuyNFTResponse = IDL.Variant({
-    'ok' : IDL.Null,
-    'notListed' : IDL.Null,
-    'unauthorized' : IDL.Null,
-    'notFound' : IDL.Null,
-    'cannotBuyOwn' : IDL.Null,
-  });
+  const SupportedStandard = IDL.Record({ 'url' : IDL.Text, 'name' : IDL.Text });
   
   return IDL.Service({
-    '_caffeineStorageBlobIsLive' : IDL.Func(
-        [IDL.Vec(IDL.Nat8)],
-        [IDL.Bool],
+    '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Bool)],
         ['query'],
       ),
-    '_caffeineStorageBlobsToDelete' : IDL.Func(
+    '_immutableObjectStorageBlobsToDelete' : IDL.Func(
         [],
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         ['query'],
       ),
-    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+    '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         [],
         [],
       ),
-    '_caffeineStorageCreateCertificate' : IDL.Func(
+    '_immutableObjectStorageCreateCertificate' : IDL.Func(
         [IDL.Text],
-        [_CaffeineStorageCreateCertificateResult],
+        [_ImmutableObjectStorageCreateCertificateResult],
         [],
       ),
-    '_caffeineStorageRefillCashier' : IDL.Func(
-        [IDL.Opt(_CaffeineStorageRefillInformation)],
-        [_CaffeineStorageRefillResult],
+    '_immutableObjectStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+        [_ImmutableObjectStorageRefillResult],
         [],
       ),
-    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'addAudiusTrackToPlaylist' : IDL.Func([IDL.Text, AudiusTrack], [], []),
     'addTrackToAlbum' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'addTrackToPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
     'createAlbum' : IDL.Func([AlbumInput], [AlbumView], []),
     'createPlaylist' : IDL.Func([IDL.Text, IDL.Text], [PlaylistView], []),
     'deleteAlbum' : IDL.Func([IDL.Text], [], []),
     'deleteAudioFile' : IDL.Func([IDL.Text], [], []),
     'deletePlaylist' : IDL.Func([IDL.Text], [], []),
+    'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
+    'dip721_metadata' : IDL.Func([], [Dip721CollectionMetadata], ['query']),
+    'dip721_name' : IDL.Func([], [IDL.Text], ['query']),
+    'dip721_owner_token_identifiers' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(IDL.Nat)],
+        ['query'],
+      ),
+    'dip721_symbol' : IDL.Func([], [IDL.Text], ['query']),
+    'dip721_token_metadata' : IDL.Func(
+        [IDL.Nat],
+        [Dip721TokenMetadataResult],
+        ['query'],
+      ),
+    'dip721_total_supply' : IDL.Func([], [IDL.Nat], ['query']),
     'getAlbum' : IDL.Func([IDL.Text], [IDL.Opt(AlbumView)], ['query']),
     'getAllAudioFiles' : IDL.Func([], [IDL.Vec(AudioFile)], ['query']),
     'getAllNFTRecords' : IDL.Func([], [IDL.Vec(NFTRecord)], ['query']),
@@ -568,6 +797,7 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCanisterId' : IDL.Func([], [IDL.Principal], ['query']),
+    'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
     'getNFTRecord' : IDL.Func([IDL.Nat], [IDL.Opt(NFTRecord)], ['query']),
     'getNFTRecordWithParams' : IDL.Func(
         [IDL.Nat],
@@ -580,31 +810,70 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'icrc7_balance_of' : IDL.Func(
+        [IDL.Vec(Account)],
+        [IDL.Vec(IDL.Nat)],
+        ['query'],
+      ),
+    'icrc7_collection_metadata' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Text, Value))],
+        ['query'],
+      ),
+    'icrc7_name' : IDL.Func([], [IDL.Text], ['query']),
+    'icrc7_owner_of' : IDL.Func(
+        [IDL.Vec(IDL.Nat)],
+        [IDL.Vec(IDL.Opt(Account))],
+        ['query'],
+      ),
+    'icrc7_symbol' : IDL.Func([], [IDL.Text], ['query']),
+    'icrc7_tokens_of' : IDL.Func(
+        [Account, IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat)],
+        [IDL.Vec(IDL.Nat)],
+        ['query'],
+      ),
+    'icrc7_total_supply' : IDL.Func([], [IDL.Nat], ['query']),
+    'icrc7_transfer' : IDL.Func(
+        [IDL.Vec(TransferArg)],
+        [IDL.Vec(IDL.Opt(TransferResult))],
+        [],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listAlbums' : IDL.Func([], [IDL.Vec(AlbumView)], ['query']),
+    'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
     'mintNFT' : IDL.Func([MintNFTRequest], [MintNFTResponse], []),
     'mintNFTwithParams' : IDL.Func(
         [MintNFTWithParamsRequest],
         [MintNFTResponse],
         [],
       ),
+    'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
     'removeAudiusTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'removeTrackFromPlaylist' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'supportedStandards' : IDL.Func(
+        [],
+        [IDL.Vec(SupportedStandard)],
+        ['query'],
+      ),
+    'transferNFT' : IDL.Func(
+        [IDL.Nat, IDL.Principal],
+        [TransferNFTResponse],
+        [],
+      ),
     'updateAlbum' : IDL.Func([IDL.Text, AlbumInput], [AlbumView], []),
     'updatePlaylistTitle' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'updateTrackCoverImage' : IDL.Func(
+        [IDL.Text, ExternalBlob],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
     'uploadAudioFile' : IDL.Func([AudioFile], [IDL.Text], []),
     'uploadTrackWithAlbum' : IDL.Func(
         [AudioFile, IDL.Opt(IDL.Text)],
         [IDL.Text],
         [],
       ),
-    'buyNFT' : IDL.Func([IDL.Nat], [BuyNFTResponse], []),
-    'delistNFT' : IDL.Func([IDL.Nat], [TransferNFTResponse], []),
-    'getListings' : IDL.Func([], [IDL.Vec(NFTListing)], ['query']),
-    'listNFTForSale' : IDL.Func([IDL.Nat, IDL.Nat], [ListNFTResponse], []),
-    'ownerOf' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Principal)], ['query']),
-    'transferNFT' : IDL.Func([IDL.Nat, IDL.Principal], [TransferNFTResponse], []),
   });
 };
 

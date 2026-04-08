@@ -1,0 +1,173 @@
+// Version: 1.0.0
+type AlbumTier__184456599 =
+  {description : Text; name : Text; price : Nat; supply : Nat};
+type Album__109360601 =
+  {
+    collectorTier : AlbumTier__184456599;
+    creationTimestamp : Int;
+    description : Text;
+    id : Text;
+    investorTier : AlbumTier__184456599;
+    listenerTier : AlbumTier__184456599;
+    name : Text;
+    theme : Text;
+    trackIds : List__415060402<Text>
+  };
+type AudioFile__256868299 =
+  {
+    albumId : ?Text;
+    blob : ExternalBlob__246066408;
+    coverImage : ?ExternalBlob__246066408;
+    creator : Text;
+    duration : Nat;
+    genre : Genre__747623302;
+    id : Text;
+    isPublic : Bool;
+    owner : ?Principal;
+    size : Nat;
+    title : Text;
+    uploadTimestamp : Int
+  };
+type AudiusTrack__514674167 =
+  {
+    artist : Text;
+    artworkUrl : Text;
+    id : Text;
+    streamUrl : Text;
+    title : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type ExternalBlob__246066408 = Blob;
+type FileType__655092642 = {#audio; #combined; #image};
+type Genre__747623302 =
+  {#classical; #electronic; #hipHop; #jazz; #other : Text; #pop; #rock};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type NFTAttachmentRecord__301717534 =
+  {
+    blob : ExternalBlob__246066408;
+    isPrivate : Bool;
+    mimeType : Text;
+    name : Text
+  };
+type NFTListing__842508568 =
+  {
+    description : Text;
+    fileType : FileType__655092642;
+    listedAt : Int;
+    priceE8s : Nat;
+    seller : Principal;
+    title : Text;
+    tokenId : Nat
+  };
+type NFTMetadata__335763981 =
+  {
+    artist : Text;
+    description : Text;
+    fileType : FileType__655092642;
+    mintTimestamp : Int;
+    originalContentId : Text;
+    owner : Principal;
+    title : Text
+  };
+type NFTParameters__12872251 =
+  {
+    price : Nat;
+    revenueSplits : [RevenueSplit__411074686];
+    royaltyPercentage : Nat;
+    stableCoin : StableCoin__287635940
+  };
+type NFTRecordWithParams__29561238 =
+  {
+    audioBlob : ?ExternalBlob__246066408;
+    imageBlob : ?ExternalBlob__246066408;
+    metadata : NFTMetadata__335763981;
+    params : NFTParameters__12872251
+  };
+type NFTRecord__80867048 =
+  {
+    audioBlob : ?ExternalBlob__246066408;
+    imageBlob : ?ExternalBlob__246066408;
+    metadata : NFTMetadata__335763981
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Playlist__961883281 =
+  {
+    audiusTracks : List__415060402<AudiusTrack__514674167>;
+    creationTimestamp : Int;
+    id : Text;
+    owner : Principal;
+    title : Text;
+    trackIds : List__415060402<Text>
+  };
+type RevenueSplit__411074686 = {address : Principal; percentage : Nat};
+type StableCoin__287635940 = {#rlusd; #tusd; #usdc; #usde; #usdp};
+type UserProfile__491224006 = {bio : ?Text; email : ?Text; name : Text};
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable albums :
+    {
+      var root : Node__46230540<Text, Album__109360601>;
+      var size : Nat__490723111
+    };
+  stable audioFiles :
+    {
+      var root : Node__46230540<Text, AudioFile__256868299>;
+      var size : Nat__490723111
+    };
+  stable nftAttachments :
+    {
+      var root : Node__46230540<Nat, [NFTAttachmentRecord__301717534]>;
+      var size : Nat__490723111
+    };
+  stable var nftCounter : Nat;
+  stable nftListings :
+    {
+      var root : Node__46230540<Nat, NFTListing__842508568>;
+      var size : Nat__490723111
+    };
+  stable nftOwnership :
+    {var root : Node__46230540<Nat, Principal>; var size : Nat__490723111};
+  stable nftRecords :
+    {
+      var root : Node__46230540<Nat, NFTRecord__80867048>;
+      var size : Nat__490723111
+    };
+  stable nftRecordsWithParams :
+    {
+      var root : Node__46230540<Nat, NFTRecordWithParams__29561238>;
+      var size : Nat__490723111
+    };
+  stable var nftWithParamsCounter : Nat;
+  stable playlists :
+    {
+      var root : Node__46230540<Text, Playlist__961883281>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    }
+};

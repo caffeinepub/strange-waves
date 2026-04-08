@@ -10,6 +10,10 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Account {
+  'owner' : Principal,
+  'subaccount' : [] | [Uint8Array],
+}
 export interface AlbumInput {
   'id' : string,
   'theme' : string,
@@ -57,10 +61,41 @@ export interface AudiusTrack {
   'streamUrl' : string,
   'artist' : string,
 }
+export type BuyNFTResponse = { 'ok' : null } |
+  { 'cannotBuyOwn' : null } |
+  { 'notListed' : null } |
+  { 'notFound' : null } |
+  { 'unauthorized' : null };
+export interface Dip721CollectionMetadata {
+  'logo' : [] | [string],
+  'name' : [] | [string],
+  'totalSupply' : bigint,
+  'created_at' : bigint,
+  'upgraded_at' : bigint,
+  'symbol' : [] | [string],
+}
+export type Dip721TokenMetadataResult = { 'Ok' : TokenMetadata } |
+  { 'Err' : string };
 export type ExternalBlob = Uint8Array;
 export type FileType = { 'audio' : null } |
   { 'combined' : null } |
   { 'image' : null };
+export type GenericValue = { 'Nat64Content' : bigint } |
+  { 'Nat32Content' : number } |
+  { 'BoolContent' : boolean } |
+  { 'Nat8Content' : number } |
+  { 'Int64Content' : bigint } |
+  { 'IntContent' : bigint } |
+  { 'NatContent' : bigint } |
+  { 'Nat16Content' : number } |
+  { 'Int32Content' : number } |
+  { 'Int8Content' : number } |
+  { 'FloatContent' : number } |
+  { 'Int16Content' : number } |
+  { 'BlobContent' : Uint8Array } |
+  { 'NestedContent' : Array<[string, GenericValue]> } |
+  { 'Principal' : Principal } |
+  { 'TextContent' : string };
 export type Genre = { 'pop' : null } |
   { 'other' : string } |
   { 'jazz' : null } |
@@ -68,6 +103,10 @@ export type Genre = { 'pop' : null } |
   { 'hipHop' : null } |
   { 'electronic' : null } |
   { 'classical' : null };
+export type ListNFTResponse = { 'ok' : null } |
+  { 'alreadyListed' : null } |
+  { 'notFound' : null } |
+  { 'unauthorized' : null };
 export interface MintNFTRequest {
   'title' : string,
   'imageBlob' : [] | [ExternalBlob],
@@ -80,12 +119,6 @@ export interface MintNFTRequest {
 export type MintNFTResponse = { 'ok' : bigint } |
   { 'invalidInput' : string } |
   { 'unauthorized' : null };
-export interface NFTAttachmentRecord {
-  'name' : string,
-  'mimeType' : string,
-  'blob' : ExternalBlob,
-  'isPrivate' : boolean,
-}
 export interface MintNFTWithParamsRequest {
   'title' : string,
   'imageBlob' : [] | [ExternalBlob],
@@ -94,8 +127,23 @@ export interface MintNFTWithParamsRequest {
   'fileType' : FileType,
   'originalContentId' : [] | [string],
   'artist' : string,
-  'params' : NFTParameters,
   'attachments' : Array<NFTAttachmentRecord>,
+  'params' : NFTParameters,
+}
+export interface NFTAttachmentRecord {
+  'blob' : ExternalBlob,
+  'name' : string,
+  'mimeType' : string,
+  'isPrivate' : boolean,
+}
+export interface NFTListing {
+  'title' : string,
+  'tokenId' : bigint,
+  'listedAt' : bigint,
+  'description' : string,
+  'fileType' : FileType,
+  'seller' : Principal,
+  'priceE8s' : bigint,
 }
 export interface NFTMetadata {
   'title' : string,
@@ -117,19 +165,13 @@ export interface NFTRecord {
   'metadata' : NFTMetadata,
   'audioBlob' : [] | [ExternalBlob],
 }
-export interface NFTRecordWithParams {
-  'imageBlob' : [] | [ExternalBlob],
-  'metadata' : NFTMetadata,
-  'audioBlob' : [] | [ExternalBlob],
-  'params' : NFTParameters,
-}
 export interface NFTRecordWithParamsView {
   'tokenId' : bigint,
   'imageBlob' : [] | [ExternalBlob],
   'metadata' : NFTMetadata,
   'audioBlob' : [] | [ExternalBlob],
-  'params' : NFTParameters,
   'attachments' : Array<NFTAttachmentRecord>,
+  'params' : NFTParameters,
 }
 export interface PlaylistView {
   'id' : string,
@@ -145,6 +187,45 @@ export type StableCoin = { 'tusd' : null } |
   { 'usde' : null } |
   { 'usdp' : null } |
   { 'rlusd' : null };
+export interface SupportedStandard { 'url' : string, 'name' : string }
+export interface TokenMetadata {
+  'transferred_at' : [] | [bigint],
+  'transferred_by' : [] | [Principal],
+  'owner' : [] | [Principal],
+  'operator' : [] | [Principal],
+  'approved_at' : [] | [bigint],
+  'approved_by' : [] | [Principal],
+  'properties' : Array<[string, GenericValue]>,
+  'is_burned' : boolean,
+  'token_identifier' : bigint,
+  'burned_at' : [] | [bigint],
+  'burned_by' : [] | [Principal],
+  'minted_at' : bigint,
+  'minted_by' : Principal,
+}
+export interface TransferArg {
+  'to' : Account,
+  'token_id' : bigint,
+  'memo' : [] | [Uint8Array],
+  'from_subaccount' : [] | [Uint8Array],
+  'created_at_time' : [] | [bigint],
+}
+export type TransferError = {
+    'GenericError' : { 'message' : string, 'error_code' : bigint }
+  } |
+  { 'Duplicate' : { 'duplicate_of' : bigint } } |
+  { 'NonExistingTokenId' : null } |
+  { 'Unauthorized' : null } |
+  { 'CreatedInFuture' : { 'ledger_time' : bigint } } |
+  { 'InvalidRecipient' : null } |
+  { 'GenericBatchError' : { 'message' : string, 'error_code' : bigint } } |
+  { 'TooOld' : null };
+export type TransferNFTResponse = { 'ok' : null } |
+  { 'alreadyListed' : null } |
+  { 'notFound' : null } |
+  { 'unauthorized' : null };
+export type TransferResult = { 'Ok' : bigint } |
+  { 'Err' : TransferError };
 export interface UserProfile {
   'bio' : [] | [string],
   'name' : string,
@@ -153,92 +234,146 @@ export interface UserProfile {
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface _CaffeineStorageCreateCertificateResult {
+export type Value = { 'Int' : bigint } |
+  { 'Map' : Array<[string, Value]> } |
+  { 'Nat' : bigint } |
+  { 'Blob' : Uint8Array } |
+  { 'Text' : string } |
+  { 'Array' : Array<Value> };
+export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
 }
-export interface _CaffeineStorageRefillInformation {
+export interface _ImmutableObjectStorageRefillInformation {
   'proposed_top_up_amount' : [] | [bigint],
 }
-export interface _CaffeineStorageRefillResult {
+export interface _ImmutableObjectStorageRefillResult {
   'success' : [] | [boolean],
   'topped_up_amount' : [] | [bigint],
 }
-export interface NFTListing {
-  'tokenId' : bigint,
-  'seller' : Principal,
-  'priceE8s' : bigint,
-  'listedAt' : bigint,
-  'title' : string,
-  'description' : string,
-  'fileType' : FileType,
-}
-export type ListNFTRawResult = { 'ok' : null } | { 'notFound' : null } | { 'unauthorized' : null } | { 'alreadyListed' : null };
-export type TransferNFTRawResult = { 'ok' : null } | { 'notFound' : null } | { 'unauthorized' : null } | { 'alreadyListed' : null };
-export type BuyNFTRawResult = { 'ok' : null } | { 'notListed' : null } | { 'unauthorized' : null } | { 'notFound' : null } | { 'cannotBuyOwn' : null };
 export interface _SERVICE {
-  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
-  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
-  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+  '_immutableObjectStorageBlobsAreLive' : ActorMethod<
+    [Array<Uint8Array>],
+    Array<boolean>
+  >,
+  '_immutableObjectStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_immutableObjectStorageConfirmBlobDeletion' : ActorMethod<
     [Array<Uint8Array>],
     undefined
   >,
-  '_caffeineStorageCreateCertificate' : ActorMethod<
+  '_immutableObjectStorageCreateCertificate' : ActorMethod<
     [string],
-    _CaffeineStorageCreateCertificateResult
+    _ImmutableObjectStorageCreateCertificateResult
   >,
-  '_caffeineStorageRefillCashier' : ActorMethod<
-    [[] | [_CaffeineStorageRefillInformation]],
-    _CaffeineStorageRefillResult
+  '_immutableObjectStorageRefillCashier' : ActorMethod<
+    [[] | [_ImmutableObjectStorageRefillInformation]],
+    _ImmutableObjectStorageRefillResult
   >,
-  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
   'addAudiusTrackToPlaylist' : ActorMethod<[string, AudiusTrack], undefined>,
   'addTrackToAlbum' : ActorMethod<[string, string], undefined>,
   'addTrackToPlaylist' : ActorMethod<[string, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  /**
+   * / Buy a listed NFT — transfers ownership to buyer
+   */
+  'buyNFT' : ActorMethod<[bigint], BuyNFTResponse>,
   'createAlbum' : ActorMethod<[AlbumInput], AlbumView>,
   'createPlaylist' : ActorMethod<[string, string], PlaylistView>,
   'deleteAlbum' : ActorMethod<[string], undefined>,
   'deleteAudioFile' : ActorMethod<[string], undefined>,
   'deletePlaylist' : ActorMethod<[string], undefined>,
+  /**
+   * / Remove an NFT listing from the marketplace
+   */
+  'delistNFT' : ActorMethod<[bigint], TransferNFTResponse>,
+  'dip721_metadata' : ActorMethod<[], Dip721CollectionMetadata>,
+  'dip721_name' : ActorMethod<[], string>,
+  'dip721_owner_token_identifiers' : ActorMethod<[Principal], Array<bigint>>,
+  'dip721_symbol' : ActorMethod<[], string>,
+  'dip721_token_metadata' : ActorMethod<[bigint], Dip721TokenMetadataResult>,
+  'dip721_total_supply' : ActorMethod<[], bigint>,
   'getAlbum' : ActorMethod<[string], [] | [AlbumView]>,
   'getAllAudioFiles' : ActorMethod<[], Array<AudioFile>>,
   'getAllNFTRecords' : ActorMethod<[], Array<NFTRecord>>,
-  'getAllNFTRecordsWithParams' : ActorMethod<[], Array<NFTRecordWithParamsView>>,
+  'getAllNFTRecordsWithParams' : ActorMethod<
+    [],
+    Array<NFTRecordWithParamsView>
+  >,
   'getAllPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getAudioFile' : ActorMethod<[string], [] | [AudioFile]>,
   'getAudioFilesByAlbum' : ActorMethod<[string], Array<AudioFile>>,
   'getCallerAudioFiles' : ActorMethod<[], Array<AudioFile>>,
-  'getCallerNFTRecordsWithParams' : ActorMethod<[], Array<NFTRecordWithParamsView>>,
+  'getCallerNFTRecordsWithParams' : ActorMethod<
+    [],
+    Array<NFTRecordWithParamsView>
+  >,
   'getCallerPlaylists' : ActorMethod<[], Array<PlaylistView>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCanisterId' : ActorMethod<[], Principal>,
+  /**
+   * / Get all active marketplace listings
+   */
+  'getListings' : ActorMethod<[], Array<NFTListing>>,
   'getNFTRecord' : ActorMethod<[bigint], [] | [NFTRecord]>,
-  'getNFTRecordWithParams' : ActorMethod<[bigint], [] | [NFTRecordWithParamsView]>,
+  'getNFTRecordWithParams' : ActorMethod<
+    [bigint],
+    [] | [NFTRecordWithParamsView]
+  >,
   'getPlaylist' : ActorMethod<[string], [] | [PlaylistView]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'icrc7_balance_of' : ActorMethod<[Array<Account>], Array<bigint>>,
+  'icrc7_collection_metadata' : ActorMethod<[], Array<[string, Value]>>,
+  'icrc7_name' : ActorMethod<[], string>,
+  'icrc7_owner_of' : ActorMethod<[Array<bigint>], Array<[] | [Account]>>,
+  'icrc7_symbol' : ActorMethod<[], string>,
+  'icrc7_tokens_of' : ActorMethod<
+    [Account, [] | [bigint], [] | [bigint]],
+    Array<bigint>
+  >,
+  'icrc7_total_supply' : ActorMethod<[], bigint>,
+  'icrc7_transfer' : ActorMethod<
+    [Array<TransferArg>],
+    Array<[] | [TransferResult]>
+  >,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listAlbums' : ActorMethod<[], Array<AlbumView>>,
+  /**
+   * / List an NFT for sale on the marketplace
+   */
+  'listNFTForSale' : ActorMethod<[bigint, bigint], ListNFTResponse>,
   'mintNFT' : ActorMethod<[MintNFTRequest], MintNFTResponse>,
   'mintNFTwithParams' : ActorMethod<
     [MintNFTWithParamsRequest],
     MintNFTResponse
   >,
+  /**
+   * / Returns the current owner of an NFT (checks ownership map first)
+   */
+  'ownerOf' : ActorMethod<[bigint], [] | [Principal]>,
   'removeAudiusTrackFromPlaylist' : ActorMethod<[string, string], undefined>,
   'removeTrackFromPlaylist' : ActorMethod<[string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  /**
+   * / Returns all NFT standards this canister implements.
+   * / Wallets use this first to know how to interact with the collection.
+   */
+  'supportedStandards' : ActorMethod<[], Array<SupportedStandard>>,
+  /**
+   * / Transfer an NFT to another principal (DIP-721 transferFrom)
+   */
+  'transferNFT' : ActorMethod<[bigint, Principal], TransferNFTResponse>,
   'updateAlbum' : ActorMethod<[string, AlbumInput], AlbumView>,
   'updatePlaylistTitle' : ActorMethod<[string, string], undefined>,
+  'updateTrackCoverImage' : ActorMethod<
+    [string, ExternalBlob],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
   'uploadAudioFile' : ActorMethod<[AudioFile], string>,
   'uploadTrackWithAlbum' : ActorMethod<[AudioFile, [] | [string]], string>,
-  'buyNFT' : ActorMethod<[bigint], BuyNFTRawResult>,
-  'delistNFT' : ActorMethod<[bigint], TransferNFTRawResult>,
-  'getListings' : ActorMethod<[], Array<NFTListing>>,
-  'listNFTForSale' : ActorMethod<[bigint, bigint], ListNFTRawResult>,
-  'ownerOf' : ActorMethod<[bigint], [] | [Principal]>,
-  'transferNFT' : ActorMethod<[bigint, Principal], TransferNFTRawResult>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

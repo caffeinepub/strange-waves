@@ -25,6 +25,7 @@ import {
   ListPlus,
   Loader2,
   Music,
+  Pencil,
   Search,
   Sparkles,
   Trash2,
@@ -45,6 +46,7 @@ import {
   useMintNFTWithParams,
   usePlaylists,
   useSearchAudiusTracks,
+  useUpdateTrackCoverImage,
 } from "../hooks/useQueries";
 import { MintSuccessBanner } from "./NFTMarketplaceActions";
 import { NFTMintDialog } from "./NFTMintDialog";
@@ -223,6 +225,13 @@ export function AudioLibrary({
     setSelectedFileForMint(null);
   };
 
+  // Edit track image state
+  const [editImageTrackId, setEditImageTrackId] = useState<string | null>(null);
+  const [editImageCurrentUrl, setEditImageCurrentUrl] = useState<
+    string | undefined
+  >(undefined);
+  const updateCoverImage = useUpdateTrackCoverImage();
+
   const renderLocalFiles = () => {
     if (isLoadingLocal) {
       return (
@@ -380,6 +389,23 @@ export function AudioLibrary({
                           }}
                         >
                           <Sparkles className="h-4 w-4 text-primary" />
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          data-ocid={`tracks.edit_image_button.${idx + 1}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditImageTrackId(file.id);
+                            setEditImageCurrentUrl(
+                              file.coverImage?.getDirectURL(),
+                            );
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                       )}
                       {isAdmin && (
@@ -641,6 +667,152 @@ export function AudioLibrary({
           isLoading={mintMutation.isPending}
         />
       )}
+
+      {/* Edit Track Cover Image Dialog */}
+      {editImageTrackId && (
+        <EditTrackImageDialog
+          trackId={editImageTrackId}
+          currentImageUrl={editImageCurrentUrl}
+          onClose={() => {
+            setEditImageTrackId(null);
+            setEditImageCurrentUrl(undefined);
+          }}
+          updateMutation={updateCoverImage}
+        />
+      )}
     </>
+  );
+}
+
+// ===== EditTrackImageDialog =====
+
+interface EditTrackImageDialogProps {
+  trackId: string;
+  currentImageUrl?: string;
+  onClose: () => void;
+  updateMutation: ReturnType<typeof useUpdateTrackCoverImage>;
+}
+
+function EditTrackImageDialog({
+  trackId,
+  currentImageUrl,
+  onClose,
+  updateMutation,
+}: EditTrackImageDialogProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(
+    currentImageUrl,
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+  };
+
+  const handleSave = async () => {
+    if (!selectedFile) return;
+    const buffer = await selectedFile.arrayBuffer();
+    await updateMutation.mutateAsync({
+      trackId,
+      imageData: new Uint8Array(buffer),
+      mimeType: selectedFile.type,
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      data-ocid="tracks.edit_image.dialog"
+    >
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold">Edit Cover Image</h2>
+
+        {/* Image preview — click to pick a file */}
+        <button
+          type="button"
+          className="mb-4 flex h-40 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/40 hover:bg-muted/60 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Select cover image"
+          data-ocid="tracks.edit_image.preview"
+        >
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Cover preview"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <Music className="h-10 w-10" />
+              <span className="text-xs">Click to select image</span>
+            </div>
+          )}
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          data-ocid="tracks.edit_image.file_input"
+        />
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="mb-4 w-full"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {selectedFile ? "Change Image" : "Select Image"}
+        </Button>
+
+        {updateMutation.isError && (
+          <p className="mb-3 text-xs text-destructive">
+            {updateMutation.error instanceof Error
+              ? updateMutation.error.message
+              : "Failed to update cover image"}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={updateMutation.isPending}
+            data-ocid="tracks.edit_image.cancel_button"
+          >
+            Cancel
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleSave}
+            disabled={!selectedFile || updateMutation.isPending}
+            data-ocid="tracks.edit_image.save_button"
+          >
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

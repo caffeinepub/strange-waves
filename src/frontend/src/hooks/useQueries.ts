@@ -12,13 +12,17 @@ import type {
   NFTAttachmentRecord,
   NFTParameters,
   NFTRecord,
-  NFTRecordWithParams,
   NFTRecordWithParamsView,
   PlaylistView,
   RevenueSplit,
   StableCoin,
 } from "../backend";
-import { ExternalBlob, FileType } from "../backend";
+import {
+  BuyNFTResponse,
+  ExternalBlob,
+  FileType,
+  TransferNFTResponse,
+} from "../backend";
 import {
   type AudiusTrack as AudiusAPITrack,
   getTrendingAudiusTracks,
@@ -962,8 +966,10 @@ export function useDelistNFT() {
     mutationFn: async (tokenId: bigint) => {
       if (!actor || !isActorReady) throw new Error("Actor not ready");
       const result = await actor.delistNFT(tokenId);
-      if (result.__kind__ === "notFound") throw new Error("NFT not found");
-      if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
+      if (result === TransferNFTResponse.notFound)
+        throw new Error("NFT not found");
+      if (result === TransferNFTResponse.unauthorized)
+        throw new Error("Unauthorized");
       return result;
     },
     onSuccess: () => {
@@ -987,16 +993,13 @@ export function useBuyNFT() {
     mutationFn: async (tokenId: bigint) => {
       if (!actor || !isActorReady) throw new Error("Actor not ready");
       const result = await actor.buyNFT(tokenId);
-      if (result.__kind__ === "notListed")
+      if (result === BuyNFTResponse.notListed)
         throw new Error("NFT is not listed for sale");
-      if (result.__kind__ === "unauthorized") throw new Error("Unauthorized");
-      if (result.__kind__ === "notFound") throw new Error("NFT not found");
-      if (result.__kind__ === "cannotBuyOwn")
+      if (result === BuyNFTResponse.unauthorized)
+        throw new Error("Unauthorized");
+      if (result === BuyNFTResponse.notFound) throw new Error("NFT not found");
+      if (result === BuyNFTResponse.cannotBuyOwn)
         throw new Error("You already own this NFT");
-      if (result.__kind__ === "insufficientFunds")
-        throw new Error(
-          "Insufficient ICP balance. Please fund your wallet before purchasing.",
-        );
       return result;
     },
     onSuccess: () => {
@@ -1032,8 +1035,8 @@ export function useTransferNFT() {
         );
       }
       const result = await actor.transferNFT(tokenId, toPrincipal as any);
-      if (result.__kind__ !== "ok") {
-        throw new Error(`Transfer failed: ${result.__kind__}`);
+      if (result !== TransferNFTResponse.ok) {
+        throw new Error(`Transfer failed: ${result}`);
       }
       return result;
     },
@@ -1046,6 +1049,44 @@ export function useTransferNFT() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to send NFT: ${error.message}`);
+    },
+  });
+}
+
+// ===== TRACK COVER IMAGE UPDATE =====
+
+export function useUpdateTrackCoverImage() {
+  const { actor, isActorReady } = useActorReady();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      trackId,
+      imageData,
+      mimeType: _mimeType,
+    }: {
+      trackId: string;
+      imageData: Uint8Array;
+      mimeType: string;
+    }) => {
+      if (!actor || !isActorReady) {
+        throw new Error("Actor not ready. Please wait or log in.");
+      }
+      const typedData = new Uint8Array(
+        imageData.buffer,
+      ) as Uint8Array<ArrayBuffer>;
+      const imageBlob = ExternalBlob.fromBytes(typedData);
+      const result = await actor.updateTrackCoverImage(trackId, imageBlob);
+      if (result.__kind__ === "err") {
+        throw new Error(result.err);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["audioFiles"] });
+      toast.success("Cover image updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update cover image: ${error.message}`);
     },
   });
 }

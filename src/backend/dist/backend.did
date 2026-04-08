@@ -1,0 +1,409 @@
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type Value = 
+ variant {
+   Array: vec Value;
+   Blob: blob;
+   Int: int;
+   Map: vec record {
+              text;
+              Value;
+            };
+   Nat: nat;
+   Text: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   bio: opt text;
+   email: opt text;
+   name: text;
+ };
+type TransferResult = 
+ variant {
+   Err: TransferError;
+   Ok: nat;
+ };
+type TransferNFTResponse = 
+ variant {
+   alreadyListed;
+   notFound;
+   ok;
+   unauthorized;
+ };
+type TransferError = 
+ variant {
+   CreatedInFuture: record {ledger_time: nat64;};
+   Duplicate: record {duplicate_of: nat;};
+   GenericBatchError: record {
+                        error_code: nat;
+                        message: text;
+                      };
+   GenericError: record {
+                   error_code: nat;
+                   message: text;
+                 };
+   InvalidRecipient;
+   NonExistingTokenId;
+   TooOld;
+   Unauthorized;
+ };
+type TransferArg = 
+ record {
+   created_at_time: opt nat64;
+   from_subaccount: opt blob;
+   memo: opt blob;
+   to: Account;
+   token_id: nat;
+ };
+type TokenMetadata = 
+ record {
+   approved_at: opt nat64;
+   approved_by: opt principal;
+   burned_at: opt nat64;
+   burned_by: opt principal;
+   is_burned: bool;
+   minted_at: nat64;
+   minted_by: principal;
+   operator: opt principal;
+   owner: opt principal;
+   properties: vec record {
+                     text;
+                     GenericValue;
+                   };
+   token_identifier: nat;
+   transferred_at: opt nat64;
+   transferred_by: opt principal;
+ };
+type SupportedStandard = 
+ record {
+   name: text;
+   url: text;
+ };
+type StableCoin = 
+ variant {
+   rlusd;
+   tusd;
+   usdc;
+   usde;
+   usdp;
+ };
+type RevenueSplit = 
+ record {
+   address: principal;
+   percentage: nat;
+ };
+type PlaylistView = 
+ record {
+   audiusTracks: vec AudiusTrack;
+   creationTimestamp: int;
+   id: text;
+   owner: principal;
+   title: text;
+   trackIds: vec text;
+ };
+type NFTRecordWithParamsView = 
+ record {
+   attachments: vec NFTAttachmentRecord;
+   audioBlob: opt ExternalBlob;
+   imageBlob: opt ExternalBlob;
+   metadata: NFTMetadata;
+   params: NFTParameters;
+   tokenId: nat;
+ };
+type NFTRecord = 
+ record {
+   audioBlob: opt ExternalBlob;
+   imageBlob: opt ExternalBlob;
+   metadata: NFTMetadata;
+ };
+type NFTParameters = 
+ record {
+   price: nat;
+   revenueSplits: vec RevenueSplit;
+   royaltyPercentage: nat;
+   stableCoin: StableCoin;
+ };
+type NFTMetadata = 
+ record {
+   artist: text;
+   description: text;
+   fileType: FileType;
+   mintTimestamp: int;
+   originalContentId: text;
+   owner: principal;
+   title: text;
+ };
+type NFTListing = 
+ record {
+   description: text;
+   fileType: FileType;
+   listedAt: int;
+   priceE8s: nat;
+   seller: principal;
+   title: text;
+   tokenId: nat;
+ };
+type NFTAttachmentRecord = 
+ record {
+   "blob": ExternalBlob;
+   isPrivate: bool;
+   mimeType: text;
+   name: text;
+ };
+type MintNFTWithParamsRequest = 
+ record {
+   artist: text;
+   attachments: vec NFTAttachmentRecord;
+   audioBlob: opt ExternalBlob;
+   description: text;
+   fileType: FileType;
+   imageBlob: opt ExternalBlob;
+   originalContentId: opt text;
+   params: NFTParameters;
+   title: text;
+ };
+type MintNFTResponse = 
+ variant {
+   invalidInput: text;
+   ok: nat;
+   unauthorized;
+ };
+type MintNFTRequest = 
+ record {
+   artist: text;
+   audioBlob: opt ExternalBlob;
+   description: text;
+   fileType: FileType;
+   imageBlob: opt ExternalBlob;
+   originalContentId: opt text;
+   title: text;
+ };
+type ListNFTResponse = 
+ variant {
+   alreadyListed;
+   notFound;
+   ok;
+   unauthorized;
+ };
+type Genre = 
+ variant {
+   classical;
+   electronic;
+   hipHop;
+   jazz;
+   other: text;
+   pop;
+   rock;
+ };
+type GenericValue = 
+ variant {
+   BlobContent: vec nat8;
+   BoolContent: bool;
+   FloatContent: float64;
+   Int16Content: int16;
+   Int32Content: int32;
+   Int64Content: int64;
+   Int8Content: int8;
+   IntContent: int;
+   Nat16Content: nat16;
+   Nat32Content: nat32;
+   Nat64Content: nat64;
+   Nat8Content: nat8;
+   NatContent: nat;
+   NestedContent: vec record {
+                        text;
+                        GenericValue;
+                      };
+   Principal: principal;
+   TextContent: text;
+ };
+type FileType = 
+ variant {
+   audio;
+   combined;
+   image;
+ };
+type ExternalBlob = blob;
+type Dip721TokenMetadataResult = 
+ variant {
+   Err: text;
+   Ok: TokenMetadata;
+ };
+type Dip721CollectionMetadata = 
+ record {
+   created_at: nat64;
+   logo: opt text;
+   name: opt text;
+   symbol: opt text;
+   totalSupply: nat;
+   upgraded_at: nat64;
+ };
+type BuyNFTResponse = 
+ variant {
+   cannotBuyOwn;
+   notFound;
+   notListed;
+   ok;
+   unauthorized;
+ };
+type AudiusTrack = 
+ record {
+   artist: text;
+   artworkUrl: text;
+   id: text;
+   streamUrl: text;
+   title: text;
+ };
+type AudioFile = 
+ record {
+   albumId: opt text;
+   "blob": ExternalBlob;
+   coverImage: opt ExternalBlob;
+   creator: text;
+   duration: nat;
+   genre: Genre;
+   id: text;
+   isPublic: bool;
+   owner: opt principal;
+   size: nat;
+   title: text;
+   uploadTimestamp: int;
+ };
+type AlbumView = 
+ record {
+   collectorTier: AlbumTier;
+   creationTimestamp: int;
+   description: text;
+   id: text;
+   investorTier: AlbumTier;
+   listenerTier: AlbumTier;
+   name: text;
+   theme: text;
+   trackIds: vec text;
+ };
+type AlbumTier = 
+ record {
+   description: text;
+   name: text;
+   price: nat;
+   supply: nat;
+ };
+type AlbumInput = 
+ record {
+   collectorTier: AlbumTier;
+   description: text;
+   id: text;
+   investorTier: AlbumTier;
+   listenerTier: AlbumTier;
+   name: text;
+   theme: text;
+ };
+type Account = 
+ record {
+   owner: principal;
+   subaccount: opt blob;
+ };
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  addAudiusTrackToPlaylist: (playlistId: text, track: AudiusTrack) -> ();
+  addTrackToAlbum: (albumId: text, trackId: text) -> ();
+  addTrackToPlaylist: (playlistId: text, trackId: text) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  /// Buy a listed NFT — transfers ownership to buyer
+  buyNFT: (tokenId: nat) -> (BuyNFTResponse);
+  createAlbum: (input: AlbumInput) -> (AlbumView);
+  createPlaylist: (id: text, title: text) -> (PlaylistView);
+  deleteAlbum: (id: text) -> ();
+  deleteAudioFile: (id: text) -> ();
+  deletePlaylist: (id: text) -> ();
+  /// Remove an NFT listing from the marketplace
+  delistNFT: (tokenId: nat) -> (TransferNFTResponse);
+  dip721_metadata: () -> (Dip721CollectionMetadata) query;
+  dip721_name: () -> (text) query;
+  dip721_owner_token_identifiers: (user: principal) -> (vec nat) query;
+  dip721_symbol: () -> (text) query;
+  dip721_token_metadata: (tokenId: nat) -> (Dip721TokenMetadataResult) query;
+  dip721_total_supply: () -> (nat) query;
+  getAlbum: (id: text) -> (opt AlbumView) query;
+  getAllAudioFiles: () -> (vec AudioFile) query;
+  getAllNFTRecords: () -> (vec NFTRecord) query;
+  getAllNFTRecordsWithParams: () -> (vec NFTRecordWithParamsView) query;
+  getAllPlaylists: () -> (vec PlaylistView) query;
+  getAudioFile: (id: text) -> (opt AudioFile) query;
+  getAudioFilesByAlbum: (albumId: text) -> (vec AudioFile) query;
+  getCallerAudioFiles: () -> (vec AudioFile) query;
+  getCallerNFTRecordsWithParams: () -> (vec NFTRecordWithParamsView) query;
+  getCallerPlaylists: () -> (vec PlaylistView) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCanisterId: () -> (principal) query;
+  /// Get all active marketplace listings
+  getListings: () -> (vec NFTListing) query;
+  getNFTRecord: (nftId: nat) -> (opt NFTRecord) query;
+  getNFTRecordWithParams: (nftId: nat) -> (opt NFTRecordWithParamsView) query;
+  getPlaylist: (id: text) -> (opt PlaylistView) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  icrc7_balance_of: (accounts: vec Account) -> (vec nat) query;
+  icrc7_collection_metadata: () -> (vec record {
+                                          text;
+                                          Value;
+                                        }) query;
+  icrc7_name: () -> (text) query;
+  icrc7_owner_of: (token_ids: vec nat) -> (vec opt Account) query;
+  icrc7_symbol: () -> (text) query;
+  icrc7_tokens_of: (account: Account, prev: opt nat, take: opt nat) ->
+   (vec nat) query;
+  icrc7_total_supply: () -> (nat) query;
+  icrc7_transfer: (args: vec TransferArg) -> (vec opt TransferResult);
+  isCallerAdmin: () -> (bool) query;
+  listAlbums: () -> (vec AlbumView) query;
+  /// List an NFT for sale on the marketplace
+  listNFTForSale: (tokenId: nat, priceE8s: nat) -> (ListNFTResponse);
+  mintNFT: (request: MintNFTRequest) -> (MintNFTResponse);
+  mintNFTwithParams: (request: MintNFTWithParamsRequest) -> (MintNFTResponse);
+  /// Returns the current owner of an NFT (checks ownership map first)
+  ownerOf: (tokenId: nat) -> (opt principal) query;
+  removeAudiusTrackFromPlaylist: (playlistId: text, trackId: text) -> ();
+  removeTrackFromPlaylist: (playlistId: text, trackId: text) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  /// Returns all NFT standards this canister implements.
+  /// Wallets use this first to know how to interact with the collection.
+  supportedStandards: () -> (vec SupportedStandard) query;
+  /// Transfer an NFT to another principal (DIP-721 transferFrom)
+  transferNFT: (tokenId: nat, to: principal) -> (TransferNFTResponse);
+  updateAlbum: (id: text, input: AlbumInput) -> (AlbumView);
+  updatePlaylistTitle: (id: text, newTitle: text) -> ();
+  updateTrackCoverImage: (trackId: text, newCoverImage: ExternalBlob) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  uploadAudioFile: (file: AudioFile) -> (text);
+  uploadTrackWithAlbum: (file: AudioFile, albumId: opt text) -> (text);
+}

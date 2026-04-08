@@ -7,13 +7,13 @@ import Nat "mo:core/Nat";
 import Time "mo:core/Time";
 import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
-import MixinStorage "blob-storage/Mixin";
-import Storage "blob-storage/Storage";
-import AccessControl "authorization/access-control";
-import MixinAuthorization "authorization/MixinAuthorization";
+import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
+import Storage "mo:caffeineai-object-storage/Storage";
+import AccessControl "mo:caffeineai-authorization/access-control";
+import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
 
 actor Self {
-  include MixinStorage();
+  include MixinObjectStorage();
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -350,20 +350,20 @@ actor Self {
   let albums = Map.empty<Text, Album>();
   let audioFiles = Map.empty<Text, AudioFile>();
   let playlists = Map.empty<Text, Playlist>();
-  var userProfiles = Map.empty<Principal, UserProfile>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
   let nftRecords = Map.empty<Nat, NFTRecord>();
   var nftCounter : Nat = 0;
   let nftRecordsWithParams = Map.empty<Nat, NFTRecordWithParams>();
   var nftWithParamsCounter : Nat = 0;
 
   // Mutable ownership map: tokenId -> current owner (for DIP-721 transfers)
-  var nftOwnership = Map.empty<Nat, Principal>();
+  let nftOwnership = Map.empty<Nat, Principal>();
 
   // Marketplace listings: tokenId -> NFTListing
-  var nftListings = Map.empty<Nat, NFTListing>();
+  let nftListings = Map.empty<Nat, NFTListing>();
 
   // Attachment storage: tokenId -> attachments
-  var nftAttachments = Map.empty<Nat, [NFTAttachmentRecord]>();
+  let nftAttachments = Map.empty<Nat, [NFTAttachmentRecord]>();
 
   // Convert Album to AlbumView (immutable)
   func toAlbumView(album : Album) : AlbumView {
@@ -930,6 +930,20 @@ actor Self {
         audioFiles.remove(id);
       };
       case (null) { Runtime.trap("Audio file not found") };
+    };
+  };
+
+  public shared ({ caller }) func updateTrackCoverImage(trackId : Text, newCoverImage : Storage.ExternalBlob) : async { #ok; #err : Text } {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      return #err("Unauthorized: Only admins can update track cover images");
+    };
+    switch (audioFiles.get(trackId)) {
+      case (null) { #err("Track not found") };
+      case (?file) {
+        let updated : AudioFile = { file with coverImage = ?newCoverImage };
+        audioFiles.add(trackId, updated);
+        #ok(());
+      };
     };
   };
 

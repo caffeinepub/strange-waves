@@ -1,0 +1,25 @@
+{
+  "overview": "Strange Waves is a music streaming and NFT minting platform on the Internet Computer. Artists can upload audio, create album pages, mint NFTs with rich metadata, and run a marketplace — all with persistent on-chain storage.",
+  "features": [
+    "Audio upload and streaming with persistent canister storage",
+    "NFT minting with DIP-721 and ICRC-7 standards",
+    "NFT marketplace with listing, buying, and transfer",
+    "Album pages (SScc Collection, Knight of the Soul, Mystic Fire, Krypto Beatz, Wellness Wednesday)",
+    "Persistent bottom bar audio player with popup controls",
+    "Playlist system with Audius integration and share links",
+    "Track editing: delete, genre tags, drag-to-sort, edit cover image",
+    "In-app wallet with ICP/stablecoin balances and NFT management",
+    "About and Socials pages with social profile links"
+  ],
+  "category": "music-entertainment",
+  "tags": [
+    "music",
+    "nft",
+    "icp",
+    "streaming",
+    "marketplace",
+    "web3",
+    "audio"
+  ],
+  "last_updated": "2026-04-08T17:38:03.295Z"
+}

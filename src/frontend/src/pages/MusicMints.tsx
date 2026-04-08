@@ -52,7 +52,7 @@ interface NFTListing {
   listedAt: bigint;
   title: string;
   description: string;
-  fileType: { audio: null } | { image: null } | { combined: null };
+  fileType: FileType | { audio: null } | { image: null } | { combined: null };
 }
 import { NFTDetailModal } from "../components/NFTDetailModal";
 import {
@@ -385,16 +385,20 @@ export function MusicMints() {
     const audioAvailable = !!nftRecord?.audioBlob;
 
     const getListingFileIcon = () => {
-      if ("audio" in listing.fileType)
+      const ft = listing.fileType;
+      if (ft === FileType.audio || (typeof ft === "object" && "audio" in ft))
         return <Music className="h-10 w-10 text-primary/60" />;
-      if ("image" in listing.fileType)
+      if (ft === FileType.image || (typeof ft === "object" && "image" in ft))
         return <ImageIcon className="h-10 w-10 text-primary/60" />;
       return <Package className="h-10 w-10 text-primary/60" />;
     };
 
     const getListingTypeLabel = () => {
-      if ("audio" in listing.fileType) return "Audio";
-      if ("image" in listing.fileType) return "Album Art";
+      const ft = listing.fileType;
+      if (ft === FileType.audio || (typeof ft === "object" && "audio" in ft))
+        return "Audio";
+      if (ft === FileType.image || (typeof ft === "object" && "image" in ft))
+        return "Album Art";
       return "Combined";
     };
 
